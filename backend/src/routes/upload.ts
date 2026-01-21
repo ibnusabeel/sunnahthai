@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 
 const uploadRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.post('/upload', async (req, reply) => {
-        const data = await req.file();
+        const data = await (req as any).file();
 
         if (!data) {
             return reply.status(400).send({ error: 'No file uploaded' });

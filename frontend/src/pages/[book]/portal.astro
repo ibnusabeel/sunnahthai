@@ -1,10 +1,18 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { getKitabs, getStats, getBookInfo, BOOK_NAMES } from "../../lib/api";
+import { getKitabs, getStats, getBookInfo, BOOK_NAMES, getDynamicBookNames } from "../../lib/api";
 
 // Server mode - dynamic routing
 const { book } = Astro.params as { book: string };
-const bookInfo = BOOK_NAMES[book] || { th: book, ar: "", icon: "📚" };
+
+// Fetch dynamic names
+let bookNames = { ...BOOK_NAMES };
+try {
+    const dynamicNames = await getDynamicBookNames();
+    bookNames = { ...bookNames, ...dynamicNames };
+} catch (e) { console.error(e); }
+
+const bookInfo = bookNames[book] || { th: book, ar: "", icon: "📚" };
 
 // Book colors
 const bookColors: Record<string, { bg: string; accent: string; border: string }> = {

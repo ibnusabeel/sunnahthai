@@ -9,6 +9,28 @@ const __dirname = path.dirname(__filename);
 
 const adminRoutes: FastifyPluginAsync = async (fastify) => {
 
+    // GET /api/book-names - Get all dynamic book names
+    fastify.get('/book-names', async (request, reply) => {
+        try {
+            const collection = await getCollection('book_info');
+            const allInfo = await collection.find({}).toArray();
+
+            // Map to dictionary keyed by book slug
+            const nameMap: Record<string, any> = {};
+            for (const info of allInfo) {
+                nameMap[info.book] = {
+                    th: info.th,
+                    ar: info.ar,
+                    description: info.description
+                };
+            }
+            return nameMap;
+        } catch (error) {
+            fastify.log.error(error);
+            return {}; // Return empty object on error to fallback safely
+        }
+    });
+
     // GET /api/debug - Check DB status
     fastify.get('/debug', async (request, reply) => {
         try {
@@ -226,6 +248,9 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
                 {
                     $set: {
                         ...updates,
+                        // Ensure th/ar/icon are saved if provided
+                        ...(updates.th ? { th: updates.th } : {}),
+                        ...(updates.ar ? { ar: updates.ar } : {}),
                         book,
                         updated_at: new Date()
                     },

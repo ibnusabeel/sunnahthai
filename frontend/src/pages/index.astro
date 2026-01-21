@@ -3,6 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import {
 	getStats,
 	getBooks,
+	getDynamicBookNames,
 	BOOK_NAMES,
 	type StatsResponse,
 	type BookItem,
@@ -76,7 +77,12 @@ const bookColors: Record<string, string> = {
 	ibnmajah: "from-lavender-light to-primary-soft border-lavender",
 };
 
+// Defaults
+let bookNames = { ...BOOK_NAMES };
+
 try {
+	const dynamicNames = await getDynamicBookNames();
+	bookNames = { ...bookNames, ...dynamicNames };
 	allStats = await getStats();
 	console.log(
 		"[SSR] Successfully fetched allStats:",
@@ -168,14 +174,30 @@ try {
 				</p>
 
 				<!-- Search Bar -->
-				<form action="/search" method="get" class="max-w-md mx-auto">
-					<div class="relative">
+				<form action="/search" method="get" class="max-w-xl mx-auto">
+					<div class="relative flex gap-2">
 						<input
 							type="text"
 							name="q"
 							placeholder="🔍 ค้นหาหะดีษ..."
-							class="input pl-5 pr-4 py-4 text-lg shadow-soft bg-white/80"
+							class="input pl-5 pr-4 py-4 text-lg shadow-soft bg-white/80 flex-1 rounded-2xl border-none"
 						/>
+						<select
+							name="book"
+							class="select bg-white/80 shadow-soft text-lg py-4 pl-4 pr-8 border-none rounded-2xl w-1/3 text-text"
+						>
+							<option value="">ทุกเล่ม 📚</option>
+							{
+								MAIN_BOOKS.map((key) => (
+									<option value={key}>
+										{BOOK_NAMES[key].th}
+									</option>
+								))
+							}
+						</select>
+						<button type="submit" class="btn btn-primary"
+							>ค้นหา</button
+						>
 					</div>
 				</form>
 			</div>
@@ -230,7 +252,7 @@ try {
 		<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
 			{
 				MAIN_BOOKS.map((key) => {
-					const book = BOOK_NAMES[key];
+					const book = bookNames[key] || BOOK_NAMES[key];
 					if (!book) return null;
 					const stats = bookStats[key];
 					const colorClass =
@@ -334,11 +356,12 @@ try {
 						const icons = ["📜", "📕", "📗", "📘", "📙", "📓"];
 						const colorClass = colors[i % colors.length];
 						const icon = icons[i % icons.length];
-						const bookInfo = BOOK_NAMES[book.book] || {
-							th: book.book,
-							ar: "",
-							icon: "📖",
-						};
+						const bookInfo = bookNames[book.book] ||
+							BOOK_NAMES[book.book] || {
+								th: book.book,
+								ar: "",
+								icon: "📖",
+							};
 
 						return (
 							<a

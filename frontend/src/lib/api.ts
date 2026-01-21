@@ -149,3 +149,37 @@ export async function getBookInfo(book: string): Promise<BookInfo> {
     if (!res.ok) throw new Error('Failed to fetch book info');
     return res.json();
 }
+
+export async function updateBookInfo(book: string, data: Partial<BookInfo> & { th?: string; ar?: string }): Promise<BookInfo> {
+    const res = await fetch(`${API_BASE_URL}/api/book-info/${book}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to update book info');
+    return res.json();
+}
+
+export async function getDynamicBookNames(): Promise<Record<string, { th: string; ar: string; icon: string }>> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/book-names`);
+        if (!res.ok) return BOOK_NAMES;
+
+        const dynamicNames = await res.json();
+        const merged = { ...BOOK_NAMES };
+
+        for (const [key, val] of Object.entries(dynamicNames) as [string, any][]) {
+            if (merged[key]) {
+                merged[key] = {
+                    ...merged[key],
+                    th: val.th || merged[key].th,
+                    ar: val.ar || merged[key].ar
+                };
+            }
+        }
+        return merged;
+    } catch (e) {
+        console.error("Failed to fetch dynamic book names:", e);
+        return BOOK_NAMES;
+    }
+}

@@ -5,6 +5,7 @@ interface HadithsQuery {
     page?: string;
     limit?: string;
     search?: string;
+    book?: string;
     status?: string;
     kitab?: string;
 }
@@ -53,9 +54,10 @@ const hadithsRoutes: FastifyPluginAsync = async (fastify) => {
             const collection = await getCollection('translations');
             const conditions: any[] = [];
 
-            // Filter by book
-            if (book) {
-                conditions.push({ hadith_book: book });
+            // Filter by book (from route param OR query param)
+            const targetBook = book || query.book;
+            if (targetBook) {
+                conditions.push({ hadith_book: targetBook });
             }
 
             // Filter by status

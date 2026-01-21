@@ -5,6 +5,7 @@ import {
   getKitabs,
   getStats,
   BOOK_NAMES,
+  getDynamicBookNames,
   type HadithsResponse,
   type KitabsResponse,
   type StatsResponse,
@@ -12,7 +13,15 @@ import {
 
 // Server mode - no getStaticPaths needed, dynamic routing handled at runtime
 const { book } = Astro.params as { book: string };
-const bookInfo = BOOK_NAMES[book] || { th: book, ar: "", icon: "📚" };
+
+// Fetch dynamic names
+let bookNames = { ...BOOK_NAMES };
+try {
+    const dynamicNames = await getDynamicBookNames();
+    bookNames = { ...bookNames, ...dynamicNames };
+} catch (e) { console.error(e); }
+
+const bookInfo = bookNames[book] || { th: book, ar: "", icon: "📚" };
 
 // Book colors
 const bookColors: Record<string, string> = {

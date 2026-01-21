@@ -1,0 +1,38 @@
+---
+interface Props {
+    title: string;
+    value: string | number;
+    icon: string;
+    color: "purple" | "blue" | "green" | "orange" | "red";
+    subtitle?: string;
+}
+
+const { title, value, icon, color, subtitle } = Astro.props;
+
+const colorClasses = {
+    purple: "bg-purple-50 text-purple-600 border-purple-100",
+    blue: "bg-blue-50 text-blue-600 border-blue-100",
+    green: "bg-emerald-50 text-emerald-600 border-emerald-100",
+    orange: "bg-orange-50 text-orange-600 border-orange-100",
+    red: "bg-red-50 text-red-600 border-red-100",
+};
+
+const colors = colorClasses[color] || colorClasses.purple;
+---
+
+<div
+    class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
+>
+    <div class="flex items-start justify-between">
+        <div>
+            <p class="text-sm font-medium text-gray-500 mb-1">{title}</p>
+            <h3 class="text-3xl font-bold text-gray-800">{value}</h3>
+            {subtitle && <p class="text-xs text-gray-400 mt-2">{subtitle}</p>}
+        </div>
+        <div
+            class={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${colors}`}
+        >
+            {icon}
+        </div>
+    </div>
+</div>

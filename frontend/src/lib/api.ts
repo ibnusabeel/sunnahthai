@@ -6,7 +6,7 @@
 // API base URL configuration
 // Points to the separate Fastify backend server
 // Points to the separate Fastify backend server
-const API_BASE_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+export const API_BASE_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
 
 export interface HadithItem {
     hadith_id: string;
@@ -182,4 +182,173 @@ export async function getDynamicBookNames(): Promise<Record<string, { th: string
         console.error("Failed to fetch dynamic book names:", e);
         return BOOK_NAMES;
     }
+}
+
+// Kitab Management
+export async function createKitab(data: KitabItem & { book: string; order?: number }): Promise<KitabItem> {
+    const res = await fetch(`${API_BASE_URL}/api/kitabs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to create kitab');
+    return res.json();
+}
+
+export async function updateKitab(kitab_id: string, data: Partial<KitabItem> & { name?: any, order?: number }): Promise<KitabItem> {
+    const res = await fetch(`${API_BASE_URL}/api/kitab/${kitab_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to update kitab');
+    return res.json();
+}
+
+export async function deleteKitab(kitab_id: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/kitab/${kitab_id}`, {
+        method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete kitab');
+}
+
+// Hadith Management
+export async function updateHadith(hadith_id: string, data: Partial<HadithItem>): Promise<HadithItem> {
+    const res = await fetch(`${API_BASE_URL}/api/hadith/${hadith_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to update hadith');
+    // ... (existing updateHadith)
+    return res.json();
+}
+
+// ------------------------------------------
+// Articles & Categories System
+// ------------------------------------------
+
+// Types
+export interface CategoryItem {
+    _id?: string;
+    name: string;
+    slug: string;
+    description?: string;
+    created_at?: string;
+}
+
+export interface ArticleItem {
+    _id?: string;
+    title: string;
+    slug: string;
+    category: string; // slug or ID
+    content: string;
+    cover_image?: string;
+    status: 'draft' | 'published';
+    author?: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface ArticlesResponse {
+    data: ArticleItem[];
+    total: number;
+    page: number;
+    limit: number;
+    total_pages: number;
+}
+
+// Upload
+export async function uploadImage(file: File): Promise<{ url: string; filename: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch(`${API_BASE_URL}/api/upload`, {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!res.ok) throw new Error('Failed to upload image');
+    return res.json();
+}
+
+// Categories
+export async function getCategories(): Promise<{ categories: CategoryItem[] }> {
+    const res = await fetch(`${API_BASE_URL}/api/categories`);
+    if (!res.ok) throw new Error('Failed to fetch categories');
+    return res.json();
+}
+
+export async function createCategory(data: Partial<CategoryItem>): Promise<CategoryItem> {
+    const res = await fetch(`${API_BASE_URL}/api/categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to create category');
+    return res.json();
+}
+
+export async function updateCategory(id: string, data: Partial<CategoryItem>): Promise<CategoryItem> {
+    const res = await fetch(`${API_BASE_URL}/api/categories/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to update category');
+    return res.json();
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/categories/${id}`, {
+        method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete category');
+}
+
+// Articles
+export async function getArticles(params: { page?: number; limit?: number; status?: string; category?: string; search?: string } = {}): Promise<ArticlesResponse> {
+    const searchParams = new URLSearchParams();
+    if (params.page) searchParams.set('page', String(params.page));
+    if (params.limit) searchParams.set('limit', String(params.limit));
+    if (params.status) searchParams.set('status', params.status);
+    if (params.category) searchParams.set('category', params.category);
+    if (params.search) searchParams.set('search', params.search);
+
+    const res = await fetch(`${API_BASE_URL}/api/articles?${searchParams.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch articles');
+    return res.json();
+}
+
+export async function getArticle(idOrSlug: string): Promise<ArticleItem> {
+    const res = await fetch(`${API_BASE_URL}/api/articles/${idOrSlug}`);
+    if (!res.ok) throw new Error('Article not found');
+    return res.json();
+}
+
+export async function createArticle(data: Partial<ArticleItem>): Promise<ArticleItem> {
+    const res = await fetch(`${API_BASE_URL}/api/articles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to create article');
+    return res.json();
+}
+
+export async function updateArticle(id: string, data: Partial<ArticleItem>): Promise<ArticleItem> {
+    const res = await fetch(`${API_BASE_URL}/api/articles/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to update article');
+    return res.json();
+}
+
+export async function deleteArticle(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/articles/${id}`, {
+        method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete article');
 }

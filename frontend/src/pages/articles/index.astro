@@ -1,0 +1,168 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getArticles, getCategories } from "../../lib/api";
+
+const page = Number(Astro.url.searchParams.get("page") || 1);
+const category = Astro.url.searchParams.get("category") || "";
+
+let articlesData = { data: [], total: 0, total_pages: 1 };
+let categories = [];
+let categoryName = "";
+
+try {
+    const [articlesRes, categoriesRes] = await Promise.all([
+        getArticles({ page, category, status: "published", limit: 9 }),
+        getCategories(),
+    ]);
+    articlesData = articlesRes;
+    categories = categoriesRes.categories;
+
+    if (category) {
+        const cat = categories.find((c: any) => c.slug === category);
+        if (cat) categoryName = cat.name;
+    }
+} catch (e) {
+    console.error("Failed to fetch data:", e);
+}
+---
+
+<BaseLayout
+    title={categoryName ? `บทความ: ${categoryName}` : "บทความและสาระน่ารู้"}
+    description="รวมบทความอิสลาม หะดีษ และสาระน่ารู้จากซุนนะห์ไทย"
+>
+    <!-- Hero Section -->
+    <section class="bg-primary/5 py-12 border-b border-primary/10">
+        <div class="container mx-auto px-4 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+                {
+                    categoryName
+                        ? `หมวดหมู่: ${categoryName}`
+                        : "บทความและสาระน่ารู้"
+                }
+            </h1>
+            <p class="text-gray-600 max-w-2xl mx-auto">
+                รวบรวมบทความเกี่ยวกับอิสลาม การอธิบายหะดีษ และเกร็ดความรู้ต่างๆ
+                เพื่อความเข้าใจที่ถูกต้อง
+            </p>
+        </div>
+    </section>
+
+    <div class="container mx-auto px-4 py-8">
+        <!-- Category Filter -->
+        <div class="flex flex-wrap gap-2 justify-center mb-10">
+            <a
+                href="/articles"
+                class={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    !category
+                        ? "bg-primary text-white shadow-lg shadow-primary/30"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+            >
+                ทั้งหมด
+            </a>
+            {
+                categories.map((c: any) => (
+                    <a
+                        href={`/articles?category=${c.slug}`}
+                        class={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                            category === c.slug
+                                ? "bg-primary text-white shadow-lg shadow-primary/30"
+                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                    >
+                        {c.name}
+                    </a>
+                ))
+            }
+        </div>
+
+        <!-- Articles Grid -->
+        <div
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
+        >
+            {
+                articlesData.data.length === 0 ? (
+                    <div class="col-span-full text-center py-20 text-gray-500 bg-gray-50 rounded-2xl">
+                        <div class="text-4xl mb-4">📝</div>
+                        <p>ยังไม่มีบทความในหมวดหมู่นี้</p>
+                    </div>
+                ) : (
+                    articlesData.data.map((article: any) => (
+                        <a
+                            href={`/articles/${article.slug}`}
+                            class="group bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                        >
+                            <div class="aspect-video bg-gray-100 relative overflow-hidden">
+                                {article.cover_image ? (
+                                    <img
+                                        src={article.cover_image}
+                                        alt={article.title}
+                                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                    />
+                                ) : (
+                                    <div class="w-full h-full flex items-center justify-center text-gray-300">
+                                        <span class="text-4xl">📚</span>
+                                    </div>
+                                )}
+                                <div class="absolute top-3 left-3">
+                                    <span class="bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-primary shadow-sm">
+                                        {categories.find(
+                                            (c: any) =>
+                                                c.slug === article.category,
+                                        )?.name || "ทั่วไป"}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="p-5">
+                                <h3 class="text-xl font-bold text-gray-800 mb-2 group-hover:text-primary transition-colors line-clamp-2">
+                                    {article.title}
+                                </h3>
+                                <div class="text-gray-500 text-sm mb-4 line-clamp-3 quill-content">
+                                    {article.content
+                                        .replace(/<[^>]*>/g, "")
+                                        .substring(0, 120)}
+                                    ...
+                                </div>
+                                <div class="flex items-center justify-between text-xs text-gray-400 pt-4 border-t border-gray-50">
+                                    <span>
+                                        {new Date(
+                                            article.created_at,
+                                        ).toLocaleDateString("th-TH", {
+                                            year: "numeric",
+                                            month: "long",
+                                            day: "numeric",
+                                        })}
+                                    </span>
+                                    <span>อ่านเพิ่มเติม →</span>
+                                </div>
+                            </div>
+                        </a>
+                    ))
+                )
+            }
+        </div>
+
+        <!-- Pagination -->
+        {
+            articlesData.total_pages > 1 && (
+                <div class="flex justify-center mt-12 gap-2">
+                    {Array.from(
+                        { length: articlesData.total_pages },
+                        (_, i) => i + 1,
+                    ).map((p) => (
+                        <a
+                            href={`?page=${p}&category=${category}`}
+                            class={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+                                p === page
+                                    ? "bg-primary text-white shadow-lg shadow-primary/30"
+                                    : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
+                            }`}
+                        >
+                            {p}
+                        </a>
+                    ))}
+                </div>
+            )
+        }
+    </div>
+</BaseLayout>

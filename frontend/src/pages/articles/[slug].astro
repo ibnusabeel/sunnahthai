@@ -1,0 +1,158 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getArticle, getCategories, type ArticleItem } from "../../lib/api";
+
+const { slug } = Astro.params;
+let article: ArticleItem | null = null;
+let categoryName = "";
+
+try {
+    if (slug) {
+        // Fetch article and categories in parallel
+        const [articleRes, categoriesRes] = await Promise.all([
+            getArticle(slug),
+            getCategories(),
+        ]);
+        article = articleRes;
+
+        const cat = categoriesRes.categories.find(
+            (c: any) => c.slug === article?.category,
+        );
+        if (cat) categoryName = cat.name;
+    }
+} catch (e) {
+    console.error("Failed to fetch article:", e);
+    return Astro.redirect("/404");
+}
+
+if (!article) return Astro.redirect("/404");
+
+// Clean description for SEO (remove HTML tags)
+const cleanDesc =
+    article.content.replace(/<[^>]*>/g, "").substring(0, 160) + "...";
+---
+
+<BaseLayout title={`${article.title} | ซุนนะห์ไทย`} description={cleanDesc}>
+    <!-- Progress Bar -->
+    <div class="fixed top-0 left-0 w-full h-1 z-50 bg-gray-100">
+        <div
+            class="h-full bg-primary origin-left scale-x-0 transition-transform duration-200"
+            id="reading-progress"
+        >
+        </div>
+    </div>
+
+    <article class="min-h-screen pb-20">
+        <!-- Header / Cover -->
+        <div class="relative h-[40vh] md:h-[50vh] bg-gray-900 flex items-end">
+            {
+                article.cover_image && (
+                    <div class="absolute inset-0">
+                        <img
+                            src={article.cover_image}
+                            alt={article.title}
+                            class="w-full h-full object-cover opacity-60"
+                            transition:name={`cover-${article.slug}`}
+                        />
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                    </div>
+                )
+            }
+
+            <div class="container mx-auto px-4 relative z-10 pb-12">
+                <div class="max-w-4xl mx-auto">
+                    <a
+                        href={`/articles?category=${article.category}`}
+                        class="inline-block px-3 py-1 bg-primary/90 text-white rounded-lg text-sm font-bold mb-4 hover:bg-primary transition-colors"
+                    >
+                        {categoryName || "บทความทั่วไป"}
+                    </a>
+                    <h1
+                        class="text-3xl md:text-5xl font-bold text-white leading-tight mb-6"
+                        transition:name={`title-${article.slug}`}
+                    >
+                        {article.title}
+                    </h1>
+                    <div
+                        class="flex items-center gap-6 text-gray-300 text-sm md:text-base"
+                    >
+                        <div class="flex items-center gap-2">
+                            <span>👤</span>
+                            <span>{article.author || "Admin"}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span>📅</span>
+                            <span
+                                >{
+                                    new Date(
+                                        article.created_at || "",
+                                    ).toLocaleDateString("th-TH", {
+                                        year: "numeric",
+                                        month: "long",
+                                        day: "numeric",
+                                    })
+                                }</span
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="container mx-auto px-4 -mt-8 relative z-20">
+            <div
+                class="max-w-4xl mx-auto bg-white rounded-3xl p-6 md:p-12 shadow-xl border border-gray-100"
+            >
+                <div
+                    class="prose prose-lg md:prose-xl max-w-none text-gray-800 prose-headings:font-bold prose-headings:text-gray-900 prose-a:text-primary prose-img:rounded-2xl"
+                >
+                    <Fragment set:html={article.content} />
+                </div>
+
+                <!-- Footer / Share (Mockup) -->
+                <div class="mt-12 pt-8 border-t border-gray-100">
+                    <div
+                        class="flex flex-col md:flex-row justify-between items-center gap-4"
+                    >
+                        <a
+                            href="/articles"
+                            class="text-primary hover:underline font-medium"
+                        >
+                            ← กลับไปหน้าบทความ
+                        </a>
+                        <div class="flex gap-2">
+                            <span class="text-gray-500">แชร์บทความนี้:</span>
+                            <button
+                                class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center hover:scale-110 transition-transform"
+                                >f</button
+                            >
+                            <button
+                                class="w-8 h-8 bg-sky-500 text-white rounded-full flex items-center justify-center hover:scale-110 transition-transform"
+                                >tw</button
+                            >
+                            <button
+                                class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center hover:scale-110 transition-transform"
+                                >ln</button
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </article>
+</BaseLayout>
+
+<script>
+    // Reading Progress Bar
+    window.addEventListener("scroll", () => {
+        const winScroll =
+            document.body.scrollTop || document.documentElement.scrollTop;
+        const height =
+            document.documentElement.scrollHeight -
+            document.documentElement.clientHeight;
+        const scrolled = (winScroll / height) * 100;
+        document.getElementById("reading-progress")!.style.transform =
+            `scaleX(${scrolled / 100})`;
+    });
+</script>

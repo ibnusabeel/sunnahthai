@@ -1,0 +1,226 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import HadithEditModal from "../../components/admin/HadithEditModal.astro";
+import { getHadiths, getDynamicBookNames, BOOK_NAMES } from "../../lib/api";
+
+// Params
+const page = parseInt(Astro.url.searchParams.get("page") || "1");
+const book = Astro.url.searchParams.get("book") || "bukhari";
+const search = Astro.url.searchParams.get("search") || "";
+const status = Astro.url.searchParams.get("status") || "";
+const limit = 20;
+
+// Fetch Data
+let data = { data: [], total: 0, total_pages: 1 };
+try {
+    data = await getHadiths({ book, page, limit, search, status });
+} catch (e) {
+    console.error(e);
+}
+
+// Fetch Books for filter
+let bookNames = { ...BOOK_NAMES };
+try {
+    const dynamicNames = await getDynamicBookNames();
+    bookNames = { ...bookNames, ...dynamicNames };
+} catch (e) {
+    console.error(e);
+}
+
+const books = Object.keys(bookNames).map((key) => ({
+    key,
+    name: bookNames[key].th,
+}));
+---
+
+<AdminLayout title="จัดการหะดีษ (Hadiths)">
+    <!-- Filters -->
+    <div
+        class="mb-6 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-4 md:space-y-0 md:flex items-center gap-4"
+    >
+        <!-- Book Select -->
+        <div class="flex-1">
+            <label class="block text-xs font-medium text-gray-500 mb-1"
+                >หนังสือ</label
+            >
+            <select
+                class="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary outline-none"
+                onchange="updateQuery('book', this.value)"
+            >
+                {
+                    books.map((b) => (
+                        <option value={b.key} selected={b.key === book}>
+                            {b.name}
+                        </option>
+                    ))
+                }
+            </select>
+        </div>
+
+        <!-- Status Select -->
+        <div class="w-full md:w-48">
+            <label class="block text-xs font-medium text-gray-500 mb-1"
+                >สถานะ</label
+            >
+            <select
+                class="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary outline-none"
+                onchange="updateQuery('status', this.value)"
+            >
+                <option value="">ทั้งหมด</option>
+                <option value="pending" selected={status === "pending"}
+                    >Pending</option
+                >
+                <option value="translated" selected={status === "translated"}
+                    >Verified</option
+                >
+            </select>
+        </div>
+
+        <!-- Search Input -->
+        <div class="flex-1">
+            <label class="block text-xs font-medium text-gray-500 mb-1"
+                >ค้นหา (ข้อความ/เลข)</label
+            >
+            <div class="relative">
+                <input
+                    type="text"
+                    value={search}
+                    placeholder="ค้นหา..."
+                    class="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary outline-none pl-10"
+                    onkeydown="if(event.key === 'Enter') updateQuery('search', this.value)"
+                />
+                <span class="absolute left-3 top-2.5 text-gray-400">🔍</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div
+        class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+    >
+        <div class="overflow-x-auto">
+            <table class="w-full text-left table-fixed">
+                <thead
+                    class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold"
+                >
+                    <tr>
+                        <th class="px-6 py-4 w-24">เลขที่</th>
+                        <th class="px-6 py-4 w-1/4">หมวด (Kitab)</th>
+                        <th class="px-6 py-4">เนื้อหา (TH/AR)</th>
+                        <th class="px-6 py-4 w-32 text-center">สถานะ</th>
+                        <th class="px-6 py-4 w-24 text-right"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {
+                        data.data.length === 0 ? (
+                            <tr>
+                                <td
+                                    colspan="5"
+                                    class="px-6 py-8 text-center text-gray-400"
+                                >
+                                    ไม่พบข้อมูล
+                                </td>
+                            </tr>
+                        ) : (
+                            data.data.map((h: any) => (
+                                <tr class="hover:bg-purple-50/30 transition-colors group">
+                                    <td class="px-6 py-4 font-mono text-gray-500 align-top">
+                                        #{h.hadith_no}
+                                    </td>
+                                    <td class="px-6 py-4 align-top">
+                                        <div class="text-sm font-medium text-gray-800 line-clamp-2">
+                                            {h.kitab?.th}
+                                        </div>
+                                        <div class="text-xs text-gray-400 font-arabic line-clamp-1">
+                                            {h.kitab?.ar}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 align-top">
+                                        <div class="text-sm text-gray-600 line-clamp-2 mb-1">
+                                            {h.content?.th || "-"}
+                                        </div>
+                                        <div
+                                            class="text-xs text-gray-400 font-arabic line-clamp-1"
+                                            dir="rtl"
+                                        >
+                                            {h.content?.ar?.substring(0, 100)}
+                                            ...
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-center align-top">
+                                        <span
+                                            class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                h.status === "translated"
+                                                    ? "bg-green-100 text-green-800"
+                                                    : "bg-yellow-100 text-yellow-800"
+                                            }`}
+                                        >
+                                            {h.status === "translated"
+                                                ? "Verified"
+                                                : "Pending"}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-right align-top">
+                                        <button
+                                            onclick={`openHadithModal(${JSON.stringify(h)})`}
+                                            class="text-gray-400 hover:text-primary transition-colors"
+                                        >
+                                            ✏️
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+                        )
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div
+            class="px-6 py-4 border-t border-gray-100 flex items-center justify-between"
+        >
+            <span class="text-sm text-gray-500">
+                หน้า {page} จาก {data.total_pages} (ทั้งหมด {data.total})
+            </span>
+            <div class="flex gap-2">
+                {
+                    page > 1 && (
+                        <button
+                            onclick={`updateQuery('page', ${page - 1})`}
+                            class="px-3 py-1 text-sm border rounded-lg hover:bg-gray-50"
+                        >
+                            ← ก่อนหน้า
+                        </button>
+                    )
+                }
+                {
+                    page < data.total_pages && (
+                        <button
+                            onclick={`updateQuery('page', ${page + 1})`}
+                            class="px-3 py-1 text-sm border rounded-lg hover:bg-gray-50"
+                        >
+                            ถัดไป →
+                        </button>
+                    )
+                }
+            </div>
+        </div>
+    </div>
+
+    <HadithEditModal />
+
+    <script is:inline>
+        function updateQuery(key, value) {
+            const url = new URL(window.location);
+            if (value) {
+                url.searchParams.set(key, value);
+            } else {
+                url.searchParams.delete(key);
+            }
+            if (key !== "page") url.searchParams.set("page", "1"); // Reset page on filter change
+            window.location.href = url.toString();
+        }
+    </script>
+</AdminLayout>

@@ -1,0 +1,132 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import KitabEditModal from "../../components/admin/KitabEditModal.astro";
+import { getKitabs, getDynamicBookNames, BOOK_NAMES } from "../../lib/api";
+
+// Get current book from query or default to bukhari
+const currentBook = Astro.url.searchParams.get("book") || "bukhari";
+
+// Fetch Kitabs
+let kitabsData = { kitabs: [] };
+try {
+    kitabsData = await getKitabs(currentBook);
+} catch (e) {
+    console.error(e);
+}
+
+// Fetch Book Names for Dropdown
+let bookNames = { ...BOOK_NAMES };
+try {
+    const dynamicNames = await getDynamicBookNames();
+    bookNames = { ...bookNames, ...dynamicNames };
+} catch (e) {
+    console.error(e);
+}
+
+const books = Object.keys(bookNames).map((key) => ({
+    key,
+    name: bookNames[key].th,
+}));
+---
+
+<AdminLayout title="จัดการหมวด (Kitabs)">
+    <!-- Book Selector -->
+    <div
+        class="mb-6 flex items-center gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm"
+    >
+        <label class="font-medium text-gray-700 whitespace-nowrap"
+            >เลือกหนังสือ:</label
+        >
+        <select
+            class="w-full md:w-64 px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+            onchange="window.location.href = '?book=' + this.value"
+        >
+            {
+                books.map((b) => (
+                    <option value={b.key} selected={b.key === currentBook}>
+                        {b.name}
+                    </option>
+                ))
+            }
+        </select>
+
+        <div class="flex-1"></div>
+
+        <button
+            onclick={`openKitabModal('${currentBook}')`}
+            class="px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary-dark transition-all font-medium shadow-lg shadow-primary/30 flex items-center gap-2 whitespace-nowrap"
+        >
+            <span>+</span> เพิ่มหมวดใหม่
+        </button>
+    </div>
+
+    <!-- Kitabs Table -->
+    <div
+        class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+    >
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead
+                    class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold"
+                >
+                    <tr>
+                        <th class="px-6 py-4 w-20 text-center">ลำดับ</th>
+                        <th class="px-6 py-4">ชื่อหมวด (TH/AR)</th>
+                        <th class="px-6 py-4 text-center">หะดีษ</th>
+                        <th class="px-6 py-4 text-right">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {
+                        kitabsData.kitabs.length === 0 ? (
+                            <tr>
+                                <td
+                                    colspan="4"
+                                    class="px-6 py-8 text-center text-gray-400"
+                                >
+                                    ยังไม่มีข้อมูลหมวดในหนังสือเล่มนี้
+                                </td>
+                            </tr>
+                        ) : (
+                            kitabsData.kitabs.map((k) => (
+                                <tr class="hover:bg-purple-50/30 transition-colors group">
+                                    <td class="px-6 py-4 text-center font-mono text-gray-500">
+                                        {k.id}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="font-bold text-gray-800 text-lg">
+                                            {k.th}
+                                        </div>
+                                        <div class="text-gray-400 font-arabic text-sm">
+                                            {k.ar}
+                                        </div>
+                                        {k.en && (
+                                            <div class="text-xs text-gray-300 mt-1">
+                                                {k.en}
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold">
+                                            {k.hadith_count || 0}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <button
+                                            onclick={`openKitabModal('${currentBook}', ${JSON.stringify(k)})`}
+                                            class="px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm text-sm font-medium"
+                                        >
+                                            ✏️ แก้ไข
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+                        )
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <KitabEditModal />
+</AdminLayout>

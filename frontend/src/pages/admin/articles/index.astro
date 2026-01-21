@@ -1,0 +1,204 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { getArticles, getCategories } from "../../../lib/api";
+
+const page = Number(Astro.url.searchParams.get("page") || 1);
+const status = Astro.url.searchParams.get("status") || "";
+const category = Astro.url.searchParams.get("category") || "";
+
+let articlesData = { data: [], total: 0, total_pages: 1 };
+let categories = [];
+
+try {
+    const [articlesRes, categoriesRes] = await Promise.all([
+        getArticles({ page, status, category, limit: 10 }),
+        getCategories(),
+    ]);
+    articlesData = articlesRes;
+    categories = categoriesRes.categories;
+} catch (e) {
+    console.error("Failed to fetch data:", e);
+}
+---
+
+<AdminLayout title="จัดการบทความ">
+    <div
+        class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6"
+    >
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">บทความทั้งหมด</h1>
+            <p class="text-gray-500">จัดการเนื้อหาบทความและข่าวสาร</p>
+        </div>
+        <a
+            href="/admin/articles/editor"
+            class="px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors flex items-center gap-2 shadow-lg shadow-primary/30"
+        >
+            <span>+</span> เขียนบทความใหม่
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div
+        class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm mb-6 flex flex-wrap gap-4"
+    >
+        <select
+            class="px-4 py-2 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-primary text-sm"
+            onchange="window.location.search = `?status=${this.value}&category=${new URLSearchParams(window.location.search).get('category') || ''}`"
+        >
+            <option value="">ทุกสถานะ</option>
+            <option value="published" selected={status === "published"}
+                >เผยแพร่แล้ว</option
+            >
+            <option value="draft" selected={status === "draft"}>แบบร่าง</option>
+        </select>
+
+        <select
+            class="px-4 py-2 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-primary text-sm"
+            onchange="window.location.search = `?category=${this.value}&status=${new URLSearchParams(window.location.search).get('status') || ''}`"
+        >
+            <option value="">ทุกหมวดหมู่</option>
+            {
+                categories.map((c: any) => (
+                    <option value={c.slug} selected={category === c.slug}>
+                        {c.name}
+                    </option>
+                ))
+            }
+        </select>
+    </div>
+
+    <!-- Articles List -->
+    <div
+        class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+    >
+        <table class="w-full text-left">
+            <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                <tr>
+                    <th class="px-6 py-3">หัวข้อ</th>
+                    <th class="px-6 py-3">หมวดหมู่</th>
+                    <th class="px-6 py-3">สถานะ</th>
+                    <th class="px-6 py-3">วันที่</th>
+                    <th class="px-6 py-3 text-right">จัดการ</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {
+                    articlesData.data.length === 0 ? (
+                        <tr>
+                            <td
+                                colspan="5"
+                                class="px-6 py-8 text-center text-gray-500"
+                            >
+                                ไม่พบบทความ
+                            </td>
+                        </tr>
+                    ) : (
+                        articlesData.data.map((article: any) => (
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        {article.cover_image && (
+                                            <img
+                                                src={article.cover_image}
+                                                alt=""
+                                                class="w-10 h-10 rounded-lg object-cover"
+                                            />
+                                        )}
+                                        <div>
+                                            <div class="font-medium text-gray-800 line-clamp-1">
+                                                {article.title}
+                                            </div>
+                                            <div class="text-xs text-gray-400 font-mono">
+                                                /{article.slug}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="px-2 py-1 rounded bg-gray-100 text-gray-600 text-xs">
+                                        {categories.find(
+                                            (c: any) =>
+                                                c.slug === article.category,
+                                        )?.name || article.category}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span
+                                        class={`px-2 py-1 rounded text-xs font-medium ${
+                                            article.status === "published"
+                                                ? "bg-green-100 text-green-700"
+                                                : "bg-yellow-100 text-yellow-700"
+                                        }`}
+                                    >
+                                        {article.status === "published"
+                                            ? "เผยแพร่แล้ว"
+                                            : "แบบร่าง"}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-500">
+                                    {new Date(
+                                        article.created_at,
+                                    ).toLocaleDateString("th-TH")}
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <div class="flex justify-end gap-2">
+                                        <a
+                                            href={`/admin/articles/editor?id=${article._id}`}
+                                            class="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-primary hover:text-white transition-colors"
+                                        >
+                                            แก้ไข
+                                        </a>
+                                        <button
+                                            class="px-3 py-1 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                                            onclick={`deleteArticle('${article._id}')`}
+                                        >
+                                            ลบ
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))
+                    )
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {
+        articlesData.total_pages > 1 && (
+            <div class="flex justify-center mt-6 gap-2">
+                {Array.from(
+                    { length: articlesData.total_pages },
+                    (_, i) => i + 1,
+                ).map((p) => (
+                    <a
+                        href={`?page=${p}&status=${status}&category=${category}`}
+                        class={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+                            p === page
+                                ? "bg-primary text-white shadow-lg shadow-primary/30"
+                                : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
+                        }`}
+                    >
+                        {p}
+                    </a>
+                ))}
+            </div>
+        )
+    }
+</AdminLayout>
+
+<script>
+    import { deleteArticle } from "../../../lib/api";
+
+    window.deleteArticle = async (id) => {
+        if (!confirm("ยืนยันที่จะลบ? การกระทำนี้ไม่สามารถย้อนกลับได้")) return;
+        try {
+            await deleteArticle(id);
+            window.location.reload();
+        } catch (e) {
+            alert("ลบไม่สำเร็จ");
+            console.error(e);
+        }
+    };
+</script>

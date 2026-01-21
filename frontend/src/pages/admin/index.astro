@@ -1,0 +1,133 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import StatCard from "../../components/admin/StatCard.astro";
+import { getBooks, getDynamicBookNames, BOOK_NAMES } from "../../lib/api";
+
+// Fetch all books with their stats
+let booksList: any[] = [];
+try {
+    const res = await getBooks();
+    booksList = res.books;
+} catch (e) {
+    console.error("Failed to fetch books:", e);
+}
+
+// Fetch dynamic names
+let bookNames = { ...BOOK_NAMES };
+try {
+    const dynamicNames = await getDynamicBookNames();
+    bookNames = { ...bookNames, ...dynamicNames };
+} catch (e) {
+    console.error(e);
+}
+
+// Calculate Overall Totals
+const totalHadiths = booksList.reduce((acc, b) => acc + (b.total || 0), 0);
+const totalTranslated = booksList.reduce(
+    (acc, b) => acc + (b.translated || 0),
+    0,
+);
+const totalPending = totalHadiths - totalTranslated;
+const percentage =
+    totalHadiths > 0 ? Math.round((totalTranslated / totalHadiths) * 100) : 0;
+
+// Enrich booksList with Names
+const enrichedBooks = booksList.map((b) => {
+    const info = bookNames[b.book];
+    return {
+        ...b,
+        th: info?.th || b.book,
+        ar: info?.ar || "",
+        key: b.book, // Keep key for reference
+    };
+});
+---
+
+<AdminLayout title="ภาพรวม (Dashboard)">
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <StatCard
+            title="หะดีษทั้งหมด"
+            value={totalHadiths.toLocaleString()}
+            icon="📚"
+            color="blue"
+        />
+        <StatCard
+            title="แปลแล้ว"
+            value={totalTranslated.toLocaleString()}
+            icon="✅"
+            color="green"
+            subtitle={`${percentage}% เสร็จสมบูรณ์`}
+        />
+        <StatCard
+            title="รอการแปล"
+            value={totalPending.toLocaleString()}
+            icon="⏳"
+            color="orange"
+        />
+        <StatCard
+            title="จำนวนเล่ม"
+            value={booksList.length}
+            icon="📖"
+            color="purple"
+        />
+    </div>
+
+    <!-- Recent Activity / Book Progress -->
+    <div
+        class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+    >
+        <div
+            class="px-6 py-4 border-b border-gray-100 flex items-center justify-between"
+        >
+            <h3 class="font-bold text-gray-800">ความคืบหน้าแต่ละเล่ม</h3>
+            <a href="/admin/books" class="text-sm text-primary hover:underline"
+                >ดูทั้งหมด →</a
+            >
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <tr>
+                        <th class="px-6 py-3">หนังสือ</th>
+                        <th class="px-6 py-3 text-center">ความคืบหน้า</th>
+                        <th class="px-6 py-3 text-right">แปลแล้ว</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {
+                        enrichedBooks.map((book) => (
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4">
+                                    <div class="font-medium text-gray-800">
+                                        {book.th}
+                                    </div>
+                                    <div class="text-xs text-gray-400">
+                                        {book.ar}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 w-1/3">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-bold w-8 text-right">
+                                            {book.percentage}%
+                                        </span>
+                                        <div class="w-full bg-gray-100 rounded-full h-2">
+                                            <div
+                                                class="bg-primary h-2 rounded-full"
+                                                style={`width: ${book.percentage}%`}
+                                            />
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-right text-sm text-gray-600">
+                                    {book.translated.toLocaleString()} /{" "}
+                                    {book.total.toLocaleString()}
+                                </td>
+                            </tr>
+                        ))
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</AdminLayout>

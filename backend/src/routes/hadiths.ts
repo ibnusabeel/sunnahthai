@@ -98,7 +98,12 @@ const hadithsRoutes: FastifyPluginAsync = async (fastify) => {
             const skip = (page - 1) * limit;
 
             const [data, total] = await Promise.all([
-                collection.find(mongoQuery).sort({ id: 1 }).skip(skip).limit(limit).toArray(),
+                collection.find(mongoQuery)
+                    .sort({ hadith_no: 1, id: 1 })
+                    .collation({ locale: "en", numericOrdering: true })
+                    .skip(skip)
+                    .limit(limit)
+                    .toArray(),
                 collection.countDocuments(mongoQuery)
             ]);
 

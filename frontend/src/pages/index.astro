@@ -87,6 +87,15 @@ try {
 	for (const book of Object.keys(BOOK_NAMES)) {
 		try {
 			bookStats[book] = await getStats(book);
+			// Override for Ahmad (Frontend Verification)
+			if (book === "ahmad" && bookStats[book]) {
+				const total = 26363;
+				const translated = bookStats[book]!.overall.translated;
+				bookStats[book]!.overall.total = total;
+				bookStats[book]!.overall.pending = total - translated;
+				bookStats[book]!.overall.percentage =
+					total > 0 ? Math.round((translated / total) * 100) : 0;
+			}
 		} catch {
 			bookStats[book] = null;
 		}
@@ -95,6 +104,18 @@ try {
 	// Fetch all books from backend to find "other" books
 	const booksData = await getBooks();
 	console.log("[SSR] Successfully fetched books:", booksData.books.length);
+
+	// Override Ahmad in books list
+	const ahmadBook = booksData.books.find((b) => b.book === "ahmad");
+	if (ahmadBook) {
+		ahmadBook.total = 26363;
+		ahmadBook.pending = ahmadBook.total - ahmadBook.translated;
+		ahmadBook.percentage =
+			ahmadBook.total > 0
+				? Math.round((ahmadBook.translated / ahmadBook.total) * 100)
+				: 0;
+	}
+
 	const PREFERRED_ORDER = ["malik", "darimi", "ahmad"];
 
 	otherBooks = booksData.books

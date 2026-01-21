@@ -190,7 +190,8 @@ try {
 							{
 								MAIN_BOOKS.map((key) => (
 									<option value={key}>
-										{BOOK_NAMES[key].th}
+										{bookNames[key]?.th ||
+											BOOK_NAMES[key]?.th}
 									</option>
 								))
 							}

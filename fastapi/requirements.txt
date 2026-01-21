@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pymongo
+google-generativeai
+python-dotenv
+pydantic
+certifi
+aiofiles
+requests
+gunicorn

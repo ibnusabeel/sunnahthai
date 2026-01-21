@@ -1,0 +1,473 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import {
+	getStats,
+	getBooks,
+	BOOK_NAMES,
+	type StatsResponse,
+	type BookItem,
+} from "../lib/api";
+
+// Main 6 books
+const MAIN_BOOKS = [
+	"bukhari",
+	"muslim",
+	"nasai",
+	"tirmidhi",
+	"abudawud",
+	"ibnmajah",
+];
+
+// Fetch stats for all books
+let allStats: StatsResponse = {
+	book: null,
+	overall: { total: 0, translated: 0, pending: 0, percentage: 0 },
+};
+let bookStats: Record<string, StatsResponse | null> = {};
+let otherBooks: BookItem[] = [];
+
+// Coming Soon Books
+const COMING_SOON_BOOKS = [
+	{
+		th: "มุสตัดร็อก อัล-หากิม",
+		ar: "مستدرك الحاكم",
+		count: 9588,
+		icon: "📗",
+	},
+	{
+		th: "ซอเฮียะฮ์ อิบนุ หิบบาน",
+		ar: "صحيح ابن حبّان",
+		count: 7500,
+		icon: "📘",
+	},
+	{
+		th: "อัล-มุอฺญัม อัล-กะบีร",
+		ar: "المعجم الكبير للطبراني",
+		count: 16000,
+		icon: "📙",
+	},
+	{
+		th: "อัส-สุนัน อัล-กุบรอ",
+		ar: "السنن الكبير للبيهقي",
+		count: 22000,
+		icon: "📓",
+	},
+	{
+		th: "อัล-ลุ'ลุ' วัล-มัรญาน",
+		ar: "اللؤلؤ والمرجان",
+		count: 1906,
+		icon: "💎",
+	},
+	{
+		th: "อัล-อะดับ อัล-มุฟร็อด",
+		ar: "الأدَبُ المُفْرَد",
+		count: 1322,
+		icon: "📔",
+	},
+];
+
+// Book colors for pastel cards
+const bookColors: Record<string, string> = {
+	bukhari: "from-mint-soft to-mint-light border-mint",
+	muslim: "from-sky-soft to-sky-light border-sky",
+	nasai: "from-peach-soft to-peach-light border-peach",
+	tirmidhi: "from-pink-soft to-pink-light border-pink",
+	abudawud: "from-primary-soft to-lavender-light border-primary-light",
+	ibnmajah: "from-lavender-light to-primary-soft border-lavender",
+};
+
+try {
+	allStats = await getStats();
+	console.log(
+		"[SSR] Successfully fetched allStats:",
+		JSON.stringify(allStats),
+	);
+
+	// Try to get stats for main books
+	for (const book of Object.keys(BOOK_NAMES)) {
+		try {
+			bookStats[book] = await getStats(book);
+		} catch {
+			bookStats[book] = null;
+		}
+	}
+
+	// Fetch all books from backend to find "other" books
+	const booksData = await getBooks();
+	console.log("[SSR] Successfully fetched books:", booksData.books.length);
+	const PREFERRED_ORDER = ["malik", "darimi", "ahmad"];
+
+	otherBooks = booksData.books
+		.filter((b) => !MAIN_BOOKS.includes(b.book))
+		.sort((a, b) => {
+			const idxA = PREFERRED_ORDER.indexOf(a.book);
+			const idxB = PREFERRED_ORDER.indexOf(b.book);
+
+			// If both in list, sort by index
+			if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+			// If A is in list, comes first
+			if (idxA !== -1) return -1;
+			// If B is in list, comes first
+			if (idxB !== -1) return 1;
+			// Otherwise maintain original or alphabetical?
+			return 0;
+		});
+} catch (error) {
+	console.error("Failed to fetch stats:", error);
+}
+---
+
+<BaseLayout title="ซุนนะห์ไทย | หน้าแรก">
+	<!-- Hero Section -->
+	<section class="relative overflow-hidden py-16 md:py-24">
+		<!-- Decorative blobs -->
+		<div
+			class="absolute top-20 right-10 w-72 h-72 bg-pink-light/40 blob blur-3xl"
+		>
+		</div>
+		<div
+			class="absolute top-40 left-10 w-64 h-64 bg-primary-light/30 blob blur-3xl"
+		>
+		</div>
+		<div
+			class="absolute bottom-10 right-1/4 w-48 h-48 bg-mint-light/40 blob blur-3xl"
+		>
+		</div>
+
+		<div class="container mx-auto px-4 relative z-10">
+			<div class="text-center max-w-3xl mx-auto animate-fade-in">
+				<h1
+					class="text-4xl md:text-5xl lg:text-6xl font-bold text-text mb-4"
+				>
+					ค้นพบ<span class="text-gradient">ปัญญา</span>แห่งหะดีษ
+				</h1>
+
+				<p class="text-lg text-text-muted mb-8 max-w-xl mx-auto">
+					รวบรวมหะดีษจากหนังสือหลัก พร้อมคำแปลภาษาไทยที่เข้าใจง่าย
+				</p>
+
+				<!-- Search Bar -->
+				<form action="/search" method="get" class="max-w-md mx-auto">
+					<div class="relative">
+						<input
+							type="text"
+							name="q"
+							placeholder="🔍 ค้นหาหะดีษ..."
+							class="input pl-5 pr-4 py-4 text-lg shadow-soft bg-white/80"
+						/>
+					</div>
+				</form>
+			</div>
+		</div>
+	</section>
+
+	<!-- Stats Section -->
+	<section class="container mx-auto px-4 -mt-4 relative z-10">
+		<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+			<div
+				class="stat-card bg-gradient-to-br from-mint-soft to-white border-2 border-mint-light"
+			>
+				<div class="stat-value">
+					{allStats.overall.total.toLocaleString()}
+				</div>
+				<div class="stat-label">📚 หะดีษทั้งหมด</div>
+			</div>
+			<div
+				class="stat-card bg-gradient-to-br from-primary-soft to-white border-2 border-primary-light"
+			>
+				<div class="stat-value">
+					{allStats.overall.translated.toLocaleString()}
+				</div>
+				<div class="stat-label">✨ แปลแล้ว</div>
+			</div>
+			<div
+				class="stat-card bg-gradient-to-br from-peach-soft to-white border-2 border-peach-light"
+			>
+				<div class="stat-value">
+					{allStats.overall.pending.toLocaleString()}
+				</div>
+				<div class="stat-label">⏳ รอแปล</div>
+			</div>
+			<div
+				class="stat-card bg-gradient-to-br from-pink-soft to-white border-2 border-pink-light"
+			>
+				<div class="stat-value">{allStats.overall.percentage}%</div>
+				<div class="stat-label">🎯 ความคืบหน้า</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- Books Section - ALL 6 BOOKS -->
+	<section class="container mx-auto px-4 py-16">
+		<div class="text-center mb-12">
+			<h2 class="text-2xl md:text-3xl font-bold text-text mb-3">
+				🌸 คลังหะดีษ
+			</h2>
+			<p class="text-text-muted">เลือกหนังสือหะดีษที่ต้องการอ่าน</p>
+		</div>
+
+		<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+			{
+				MAIN_BOOKS.map((key) => {
+					const book = BOOK_NAMES[key];
+					if (!book) return null;
+					const stats = bookStats[key];
+					const colorClass =
+						bookColors[key] ||
+						"from-gray-100 to-white border-gray-200";
+					return (
+						<a
+							href={`/${key}`}
+							class={`group relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br ${colorClass} p-6 hover:shadow-glow hover:-translate-y-2 transition-all duration-300`}
+						>
+							{/* Decorative blob */}
+							<div class="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-white/30 blur-xl group-hover:scale-150 transition-transform duration-500" />
+
+							{/* Icon - Larger and centered */}
+							<div class="flex justify-center mb-4">
+								<div class="w-20 h-20 rounded-2xl bg-white/70 backdrop-blur flex items-center justify-center text-5xl group-hover:scale-110 transition-transform shadow-lg border border-white/50">
+									{book.icon}
+								</div>
+							</div>
+
+							{/* Text - Centered */}
+							<div class="text-center relative z-10">
+								<h3 class="font-bold text-xl text-text group-hover:text-primary-dark transition-colors mb-1">
+									{book.th}
+								</h3>
+								<p class="font-arabic text-primary text-xl text-base mb-4">
+									{book.ar}
+								</p>
+
+								{/* Hadith Count - NEW */}
+								{stats ? (
+									<div class="space-y-3">
+										<div class="flex justify-center gap-3">
+											<div class="px-3 py-1.5 rounded-lg bg-white/60 backdrop-blur border border-white/50">
+												<span class="text-lg font-bold text-text">
+													{stats.overall.total.toLocaleString()}
+												</span>
+												<span class="text-xs text-text-muted ml-1">
+													หะดีษ
+												</span>
+											</div>
+											<div class="px-3 py-1.5 rounded-lg bg-mint/30 backdrop-blur border border-mint/50">
+												<span class="text-lg font-bold text-emerald-700">
+													{stats.overall.translated.toLocaleString()}
+												</span>
+												<span class="text-xs text-emerald-600 ml-1">
+													แปลแล้ว
+												</span>
+											</div>
+										</div>
+
+										{/* Progress Bar */}
+										<div class="flex items-center gap-2">
+											<div class="flex-1 h-3 bg-white/60 rounded-full overflow-hidden shadow-inner">
+												<div
+													class="h-full bg-gradient-to-r from-primary to-pink rounded-full transition-all"
+													style={`width: ${stats.overall.percentage}%`}
+												/>
+											</div>
+											<span class="text-sm font-bold text-primary">
+												{stats.overall.percentage}%
+											</span>
+										</div>
+									</div>
+								) : (
+									<p class="text-sm text-text-light py-4">
+										🌸 เร็วๆ นี้
+									</p>
+								)}
+							</div>
+						</a>
+					);
+				})
+			}
+		</div>
+	</section>
+
+	<!-- Other Books Section -->
+	{
+		otherBooks.length > 0 && (
+			<section class="container mx-auto px-4 pb-16">
+				<div class="text-center mb-8">
+					<h2 class="text-xl md:text-2xl font-bold text-text mb-2">
+						📚 หนังสืออื่นๆ
+					</h2>
+					<p class="text-text-muted text-sm">
+						หะดีษจากหนังสือคอลเลคชันเพิ่มเติม
+					</p>
+				</div>
+
+				<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+					{otherBooks.map((book, i) => {
+						const colors = [
+							"from-amber-100 to-amber-50 border-amber-200",
+							"from-cyan-100 to-cyan-50 border-cyan-200",
+							"from-rose-100 to-rose-50 border-rose-200",
+							"from-violet-100 to-violet-50 border-violet-200",
+							"from-teal-100 to-teal-50 border-teal-200",
+							"from-fuchsia-100 to-fuchsia-50 border-fuchsia-200",
+						];
+						const icons = ["📜", "📕", "📗", "📘", "📙", "📓"];
+						const colorClass = colors[i % colors.length];
+						const icon = icons[i % icons.length];
+						const bookInfo = BOOK_NAMES[book.book] || {
+							th: book.book,
+							ar: "",
+							icon: "📖",
+						};
+
+						return (
+							<a
+								href={`/${book.book}`}
+								class={`group relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br ${colorClass} p-5 hover:shadow-glow hover:-translate-y-2 transition-all duration-300`}
+							>
+								{/* Decorative blob */}
+								<div class="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-white/40 blur-xl group-hover:scale-150 transition-transform duration-500" />
+
+								<div class="flex items-center gap-4 relative z-10">
+									<div class="w-14 h-14 rounded-xl bg-white/70 backdrop-blur flex items-center justify-center text-3xl group-hover:scale-110 transition-transform shadow-sm">
+										{bookInfo.icon || icon}
+									</div>
+									<div class="flex-1 min-w-0">
+										<h3 class="font-bold text-base text-text group-hover:text-primary-dark transition-colors">
+											{bookInfo.th}
+										</h3>
+										{bookInfo.ar && (
+											<p
+												class="font-arabic text-sm text-text-muted"
+												dir="rtl"
+											>
+												{bookInfo.ar}
+											</p>
+										)}
+										<div class="flex items-center gap-3 text-sm mt-1">
+											<span class="text-text-muted">
+												{book.total.toLocaleString()}{" "}
+												หะดีษ
+											</span>
+											<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
+												{book.translated.toLocaleString()}{" "}
+												แปลแล้ว
+											</span>
+										</div>
+									</div>
+								</div>
+
+								{/* Progress bar */}
+								<div class="mt-4 flex items-center gap-2">
+									<div class="flex-1 h-2 bg-white/60 rounded-full overflow-hidden shadow-inner">
+										<div
+											class="h-full bg-gradient-to-r from-primary to-pink rounded-full transition-all"
+											style={`width: ${book.percentage}%`}
+										/>
+									</div>
+									<span class="text-xs font-bold text-primary">
+										{book.percentage}%
+									</span>
+								</div>
+							</a>
+						);
+					})}
+				</div>
+			</section>
+		)
+	}
+
+	<!-- Coming Soon Section -->
+	<section class="container mx-auto px-4 pb-16">
+		<div class="text-center mb-8">
+			<h2
+				class="text-xl md:text-2xl font-bold text-text mb-2 animate-pulse"
+			>
+				🚧 โครงการในอนาคต (อินชาอัลลอฮฺ)
+			</h2>
+			<p class="text-text-muted text-sm">
+				หนังสือที่อยู่ในแผนการแปลและนำลงระบบ
+			</p>
+		</div>
+
+		<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+			{
+				COMING_SOON_BOOKS.map((book) => (
+					<div class="group relative overflow-hidden rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-5 opacity-80 hover:opacity-100 transition-opacity">
+						<div class="flex items-center gap-4 relative z-10">
+							<div class="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center text-3xl grayscale group-hover:grayscale-0 transition-all">
+								{book.icon}
+							</div>
+							<div class="flex-1 min-w-0">
+								<h3 class="font-bold text-base text-gray-700">
+									{book.th}
+								</h3>
+								<p
+									class="font-arabic text-sm text-gray-500"
+									dir="rtl"
+								>
+									{book.ar}
+								</p>
+								<div class="flex items-center gap-2 text-sm mt-1">
+									<span class="text-gray-400">
+										ประมาณ {book.count.toLocaleString()}{" "}
+										หะดีษ
+									</span>
+									<span class="px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 text-xs font-medium">
+										เร็วๆ นี้
+									</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				))
+			}
+		</div>
+	</section>
+
+	<!-- Features Section -->
+	<section class="py-16">
+		<div class="container mx-auto px-4">
+			<div class="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+				<div
+					class="text-center card bg-gradient-to-br from-mint-soft to-white border-2 border-mint-light"
+				>
+					<div
+						class="w-14 h-14 rounded-full bg-mint flex items-center justify-center mx-auto mb-4"
+					>
+						<span class="text-2xl">🔍</span>
+					</div>
+					<h3 class="font-bold text-text mb-2">ค้นหาง่าย</h3>
+					<p class="text-sm text-text-muted">
+						ค้นหาหะดีษด้วยคำค้น ทั้งภาษาไทยและอาหรับ
+					</p>
+				</div>
+				<div
+					class="text-center card bg-gradient-to-br from-pink-soft to-white border-2 border-pink-light"
+				>
+					<div
+						class="w-14 h-14 rounded-full bg-pink flex itemshttps://trello.com/c/xlKr8vLA/1508-%E0%B8%81%E0%B8%A5%E0%B9%88%E0%B8%AD%E0%B8%87%E0%B9%83%E0%B8%AA%E0%B8%9E%E0%B8%A3%E0%B9%89%E0%B8%AD%E0%B8%A1%E0%B8%9D%E0%B8%B2-center justify-center mx-auto mb-4"
+					>
+						<span class="text-2xl">📱</span>
+					</div>
+					<h3 class="font-bold text-text mb-2">ใช้งานออฟไลน์</h3>
+					<p class="text-sm text-text-muted">
+						ติดตั้งเป็นแอปบนมือถือ ใช้ได้แม้ไม่มีอินเทอร์เน็ต
+					</p>
+				</div>
+				<div
+					class="text-center card bg-gradient-to-br from-primary-soft to-white border-2 border-primary-light"
+				>
+					<div
+						class="w-14 h-14 rounded-full bg-primary-light flex items-center justify-center mx-auto mb-4"
+					>
+						<span class="text-2xl">✨</span>
+					</div>
+					<h3 class="font-bold text-text mb-2">อัปเดตต่อเนื่อง</h3>
+					<p class="text-sm text-text-muted">
+						เพิ่มคำแปลใหม่ๆ ทุกวัน
+					</p>
+				</div>
+			</div>
+		</div>
+	</section>
+</BaseLayout>

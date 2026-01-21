@@ -1,0 +1,494 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import {
+  getHadiths,
+  getKitabs,
+  getStats,
+  BOOK_NAMES,
+  type HadithsResponse,
+  type KitabsResponse,
+  type StatsResponse,
+} from "../../lib/api";
+
+// Server mode - no getStaticPaths needed, dynamic routing handled at runtime
+const { book } = Astro.params as { book: string };
+const bookInfo = BOOK_NAMES[book] || { th: book, ar: "", icon: "📚" };
+
+// Book colors
+const bookColors: Record<string, string> = {
+  bukhari: "from-mint-soft to-mint-light border-mint",
+  muslim: "from-sky-soft to-sky-light border-sky",
+  nasai: "from-peach-soft to-peach-light border-peach",
+  tirmidhi: "from-pink-soft to-pink-light border-pink",
+  abudawud: "from-primary-soft to-lavender-light border-primary-light",
+  ibnmajah: "from-lavender-light to-primary-soft border-lavender",
+};
+const colorClass = bookColors[book] || "from-gray-100 to-white border-gray-200";
+
+// Get query params
+const url = new URL(Astro.request.url);
+const page = parseInt(url.searchParams.get("page") || "1");
+const search = url.searchParams.get("search") || "";
+const kitabFilter = url.searchParams.get("kitab") || "";
+const viewAll = url.searchParams.get("view") === "all";
+
+// Show portal if no filters and not viewing all - redirect to portal page
+const showHadithList = viewAll || search || kitabFilter || page > 1;
+
+// If showing portal, redirect to portal page
+if (!showHadithList) {
+  return Astro.redirect(`/${book}/portal`);
+}
+
+// Fetch data with proper types
+let hadiths: HadithsResponse = {
+  book: null,
+  data: [],
+  total: 0,
+  total_pages: 0,
+  page: 1,
+  limit: 12,
+};
+let kitabs: KitabsResponse = { book: book || "", kitabs: [] };
+let stats: StatsResponse = {
+  book: null,
+  overall: { total: 0, translated: 0, pending: 0, percentage: 0 },
+};
+
+try {
+  [hadiths, kitabs, stats] = await Promise.all([
+    getHadiths({ book, page, search, kitab: kitabFilter, limit: 12 }),
+    getKitabs(book),
+    getStats(book),
+  ]);
+} catch (error) {
+  console.error("Failed to fetch data:", error);
+}
+
+// Highlight function for search results
+function highlightText(text: string, searchQuery: string): string {
+  if (!text || !searchQuery.trim()) return text;
+  const regex = new RegExp(
+    `(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+    "gi",
+  );
+  return text.replace(
+    regex,
+    '<mark class="bg-yellow-200 text-yellow-900 px-0.5 rounded">$1</mark>',
+  );
+}
+
+// Helper to get grade badge color
+function getGradeColor(status: string): string {
+  if (!status) return "bg-gray-100 text-gray-800 border-gray-200";
+  if (status.includes("Sahih") || status.includes("ซอเฮียะฮ์"))
+    return "bg-emerald-100 text-emerald-800 border bg-emerald-100/50 border-emerald-200";
+  if (status.includes("Hasan") || status.includes("หะสัน"))
+    return "bg-sky-100 text-sky-800 border bg-sky-100/50 border-sky-200";
+  if (
+    status.includes("Daif") ||
+    status.includes("Da'if") ||
+    status.includes("ฎออีฟ")
+  )
+    return "bg-orange-100 text-orange-800 border bg-orange-100/50 border-orange-200";
+  if (status.includes("Mawdu") || status.includes("เมาฎั๊วะ"))
+    return "bg-red-100 text-red-800 border bg-red-100/50 border-red-200";
+  return "bg-gray-100 text-gray-800 border bg-gray-100/50 border-gray-200";
+}
+// Helper to translate status to Thai
+function getGradeThai(status: string): string {
+  if (!status) return "";
+  const lower = status.toLowerCase();
+
+  if (lower.includes("sahih")) return " เศาะฮีหฺ";
+  if (lower.includes("hasan")) return "หะสัน";
+  if (
+    lower.includes("daif") ||
+    lower.includes("da'if") ||
+    lower.includes("weak")
+  )
+    return "ฎออีฟ";
+  if (lower.includes("mawdu") || lower.includes("fabricated"))
+    return "เมาฎั๊วะ";
+  if (lower.includes("mutawatir")) return "มุตะวาติร";
+
+  return status; // Fallback
+}
+---
+
+<BaseLayout title={`${bookInfo.th} | ซุนนะห์ไทย`}>
+  <!-- Header with pastel gradient -->
+  <section class={`bg-gradient-to-r ${colorClass} border-b-2`}>
+    <div class="container mx-auto px-4 py-8">
+      <div class="flex items-center gap-4 mb-4">
+        <a
+          href="/"
+          class="p-2 rounded-full bg-white/60 text-text-muted hover:text-primary hover:bg-white transition-all"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 19l-7-7 7-7"></path>
+          </svg>
+        </a>
+        <div class="flex-1">
+          <div class="flex items-center gap-3">
+            <span class="text-4xl">{bookInfo.icon}</span>
+            <div>
+              <h1 class="text-2xl md:text-3xl font-bold text-text">
+                {bookInfo.th}
+              </h1>
+              <p class="font-arabic text-primary">{bookInfo.ar}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats mini with pastel badges -->
+      <div class="flex flex-wrap gap-3 text-sm">
+        <span class="badge bg-white/80 border border-white">
+          📚 {stats.overall.total.toLocaleString()} หะดีษ
+        </span>
+        <span class="badge badge-success">
+          ✨ {stats.overall.translated.toLocaleString()} แปลแล้ว
+        </span>
+        <span class="badge badge-pending">
+          ⏳ {stats.overall.pending.toLocaleString()} รอแปล
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Filters -->
+  <section
+    class="sticky top-16 z-40 bg-white/90 backdrop-blur border-b-2 border-border"
+  >
+    <div class="container mx-auto px-4 py-4">
+      <form method="get" class="flex flex-wrap gap-3">
+        <div class="flex-1 min-w-[200px]">
+          <input
+            type="text"
+            name="search"
+            value={search}
+            placeholder="🔍 ค้นหาหะดีษ..."
+            class="input text-sm"
+          />
+        </div>
+
+        <select name="kitab" class="input w-auto min-w-[180px] text-sm">
+          <option value="">📁 ทุกหมวด (กิตาบ)</option>
+          {
+            kitabs.kitabs.map((k) => {
+              const value = k.th || k.en || k.ar;
+              const label = k.th || k.en || k.ar;
+              return (
+                <option value={value} selected={value === kitabFilter}>
+                  {label}
+                </option>
+              );
+            })
+          }
+        </select>
+
+        <button type="submit" class="btn btn-primary text-sm"> ค้นหา </button>
+
+        {
+          (search || kitabFilter) && (
+            <a href={`/${book}`} class="btn btn-secondary text-sm">
+              ล้างตัวกรอง
+            </a>
+          )
+        }
+      </form>
+    </div>
+  </section>
+
+  <!-- Hadith List -->
+  <section class="container mx-auto px-4 py-8">
+    {
+      hadiths.data.length === 0 ? (
+        <div class="text-center py-16">
+          <div class="text-6xl mb-4">🔍</div>
+          <h2 class="text-xl font-bold text-text mb-2">ไม่พบหะดีษ</h2>
+          <p class="text-text-muted">ลองเปลี่ยนคำค้นหาหรือตัวกรอง</p>
+        </div>
+      ) : (
+        <>
+          <div class="text-sm text-text-muted mb-6">
+            🌸 พบ {hadiths.total.toLocaleString()} หะดีษ • หน้า {hadiths.page}{" "}
+            จาก {hadiths.total_pages}
+          </div>
+
+          <div class="space-y-6">
+            {hadiths.data.map((hadith, i) => (
+              <article
+                class="hadith-card animate-fade-in"
+                style={`animation-delay: ${i * 50}ms`}
+              >
+                {/* Header */}
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-4 border-b border-border">
+                  {/* Hadith Number - More Prominent */}
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm sm:text-base font-bold text-white bg-gradient-to-r from-primary to-pink px-4 py-2 rounded-xl shadow-md">
+                      📖 หะดีษที่ {hadith.hadith_no}
+                    </span>
+                    {hadith.status === "translated" ? (
+                      <span class="badge badge-success text-xs">
+                        ✨ แปลแล้ว
+                      </span>
+                    ) : (
+                      <span class="badge badge-pending text-xs">⏳ รอแปล</span>
+                    )}
+                  </div>
+
+                  {/* Report Error Button */}
+                  <div class="relative group/report">
+                    <button
+                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-100 text-orange-700 hover:bg-red-100 hover:text-red-700 border border-orange-200 hover:border-red-300 transition-colors"
+                      title="แจ้งข้อผิดพลาด"
+                    >
+                      <svg
+                        class="w-3.5 h-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        />
+                      </svg>
+                      แจ้งข้อผิดพลาด
+                    </button>
+                    {/* Dropdown */}
+                    <div class="absolute right-0 top-full mt-1 hidden group-hover/report:block z-50">
+                      <div class="bg-white rounded-xl shadow-lg border border-border p-2 min-w-[200px]">
+                        <a
+                          href={`https://line.me/R/ti/p/@436qprra`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-emerald-50 text-sm text-text hover:text-emerald-600 transition-colors"
+                        >
+                          <span class="text-lg">💚</span>
+                          แจ้งผ่าน LINE OA
+                        </a>
+                        <a
+                          href={`https://t.me/SunnahTHBot`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-sky-50 text-sm text-text hover:text-sky-600 transition-colors"
+                        >
+                          <span class="text-lg">✈️</span>
+                          แจ้งผ่าน Telegram
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Kitab & Bab - Beautiful Card */}
+                {(hadith.kitab?.ar || hadith.kitab?.th || hadith.kitab?.en) && (
+                  <div class="relative mb-4 p-4 bg-gradient-to-r from-primary-soft/60 via-pink-soft/40 to-lavender-light/60 rounded-xl border border-primary-light/30 overflow-hidden">
+                    {/* Decorative background */}
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-pink-light/30 rounded-full blur-2xl -translate-y-4 translate-x-4" />
+
+                    <div class="relative flex items-center gap-3">
+                      {/* Icon */}
+                      <div class="w-10 h-10 flex-shrink-0 rounded-full bg-white/80 shadow-sm flex items-center justify-center">
+                        <span class="text-lg">📖</span>
+                      </div>
+
+                      {/* Text Content */}
+                      <div class="flex-1 min-w-0">
+                        {/* Arabic name if exists */}
+                        {hadith.kitab.ar && (
+                          <div
+                            class="font-arabic text-xl text-primary md:float-right text-base leading-relaxed"
+                            dir="rtl"
+                          >
+                            {hadith.kitab.ar}
+                          </div>
+                        )}
+                        {/* Thai name */}
+                        {hadith.kitab.th && (
+                          <div
+                            class={`md:float-left text-sm ${hadith.kitab.ar ? "text-text-muted mt-1" : "text-primary font-medium"}`}
+                          >
+                            🌸 {hadith.kitab.th}
+                          </div>
+                        )}
+                        {/* English name (fallback if no Thai) */}
+                        {!hadith.kitab.th && hadith.kitab.en && (
+                          <div
+                            class={`text-sm ${hadith.kitab.ar ? "text-text-muted mt-1" : "text-primary font-medium"}`}
+                          >
+                            📚 {hadith.kitab.en}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Split Layout: Thai LEFT, Arabic RIGHT */}
+                <div class="hadith-content-split">
+                  {/* Thai Translation - LEFT */}
+                  <div class="order-1">
+                    {hadith.content.th ? (
+                      <div class="hadith-thai h-full">
+                        <div class="text-xs font-medium text-emerald-600 mb-2 flex items-center gap-1">
+                          🇹🇭 คำแปลภาษาไทย
+                        </div>
+                        {search ? (
+                          <span
+                            set:html={highlightText(hadith.content.th, search)}
+                          />
+                        ) : (
+                          hadith.content.th
+                        )}
+                      </div>
+                    ) : (
+                      <div class="h-full p-4 bg-peach-soft/50 rounded-lg border-l-4 border-peach flex items-center justify-center">
+                        <span class="text-text-light italic text-sm">
+                          ⏳ กำลังแปล...
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Arabic Content - RIGHT */}
+                  <div class="order-2">
+                    <div class="hadith-arabic h-full">
+                      <div class="text-xs font-medium text-primary mb-2 flex items-center justify-end gap-1">
+                        النص العربي 🕌
+                      </div>
+                      {search ? (
+                        <span
+                          set:html={highlightText(hadith.content.ar, search)}
+                        />
+                      ) : (
+                        hadith.content.ar
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer - Status & Actions */}
+                <div class="mt-4 pt-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+                  {/* Status */}
+                  <div>
+                    {hadith.hadith_status && (
+                      <span
+                        class={`px-4 py-2 rounded-xl text-sm font-semibold border-2 ${getGradeColor(hadith.hadith_status)}`}
+                      >
+                        ✅ {getGradeThai(hadith.hadith_status)}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* Actions */}
+                  <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      class="btn-copy flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-text-muted hover:text-text transition-all text-sm font-medium"
+                      data-content={`หะดีษที่ ${hadith.hadith_no}\n\n${hadith.content.th}\n\n${hadith.content.ar}\n\n(จาก ${bookInfo.th})`}
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                      คัดลอก
+                    </button>
+                    
+                    <button
+                      class="btn-share flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary transition-all text-sm font-medium"
+                      data-title={`${bookInfo.th} หะดีษที่ ${hadith.hadith_no}`}
+                      data-text={`หะดีษที่ ${hadith.hadith_no}\n${hadith.content.th}`}
+                      data-url={Astro.url.href}
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                      แชร์
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+
+        <script>
+          // Copy Logic
+          document.querySelectorAll('.btn-copy').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              const content = btn.getAttribute('data-content');
+              try {
+                await navigator.clipboard.writeText(content);
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<span class="text-emerald-600">✓ คัดลอกแล้ว</span>';
+                setTimeout(() => btn.innerHTML = originalText, 2000);
+              } catch (err) {
+                console.error('Failed to copy:', err);
+              }
+            });
+          });
+
+          // Share Logic
+          document.querySelectorAll('.btn-share').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              const shareData = {
+                title: btn.getAttribute('data-title'),
+                text: btn.getAttribute('data-text'),
+                url: btn.getAttribute('data-url')
+              };
+              
+              if (navigator.share) {
+                try {
+                  await navigator.share(shareData);
+                } catch (err) {
+                  console.log('Share canceled');
+                }
+              } else {
+                // Fallback for browsers without share API
+                const content = `${shareData.title}\n\n${shareData.text}\n\n${shareData.url}`;
+                await navigator.clipboard.writeText(content);
+                alert('คัดลอกลิงก์แล้ว (เบราว์เซอร์นี้ไม่รองรับการแชร์โดยตรง)');
+              }
+            });
+          });
+        </script>
+
+          {/* Pagination */}
+          {hadiths.total_pages > 1 && (
+            <nav class="flex justify-center items-center gap-2 mt-12">
+              {page > 1 && (
+                <a
+                  href={`/${book}?page=${page - 1}${search ? `&search=${search}` : ""}${kitabFilter ? `&kitab=${kitabFilter}` : ""}`}
+                  class="btn btn-secondary"
+                >
+                  ← ก่อนหน้า
+                </a>
+              )}
+
+              <span class="px-4 py-2 text-text-muted bg-white rounded-cute shadow-sm">
+                หน้า {page} / {hadiths.total_pages}
+              </span>
+
+              {page < hadiths.total_pages && (
+                <a
+                  href={`/${book}?page=${page + 1}${search ? `&search=${search}` : ""}${kitabFilter ? `&kitab=${kitabFilter}` : ""}`}
+                  class="btn btn-primary"
+                >
+                  ถัดไป →
+                </a>
+              )}
+            </nav>
+          )}
+        </>
+      )
+    }
+  </section>
+</BaseLayout>

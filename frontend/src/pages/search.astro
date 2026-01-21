@@ -1,0 +1,203 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getHadiths, BOOK_NAMES, type HadithsResponse } from "../lib/api";
+
+// Get search query from URL
+const url = new URL(Astro.request.url);
+const query = url.searchParams.get("q") || "";
+const page = parseInt(url.searchParams.get("page") || "1");
+
+// Search all books if query exists
+let searchResults: HadithsResponse | null = null;
+
+if (query.trim()) {
+    try {
+        searchResults = await getHadiths({
+            search: query,
+            page,
+            limit: 20,
+        });
+    } catch (error) {
+        console.error("Search error:", error);
+    }
+}
+
+// Highlight function
+function highlightText(text: string, searchQuery: string): string {
+    if (!text || !searchQuery.trim()) return text;
+    const regex = new RegExp(
+        `(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+        "gi",
+    );
+    return text.replace(
+        regex,
+        '<mark class="bg-yellow-200 text-yellow-900 px-0.5 rounded">$1</mark>',
+    );
+}
+
+// Helper to get grade badge color
+function getGradeColor(status: string): string {
+    if (!status) return "bg-gray-100 text-gray-800 border-gray-200";
+    if (status.includes("Sahih") || status.includes("ซอเฮียะฮ์"))
+        return "bg-emerald-100 text-emerald-800 border bg-emerald-100/50 border-emerald-200";
+    if (status.includes("Hasan") || status.includes("หะสัน"))
+        return "bg-sky-100 text-sky-800 border bg-sky-100/50 border-sky-200";
+    if (
+        status.includes("Daif") ||
+        status.includes("Da'if") ||
+        status.includes("ฎออีฟ")
+    )
+        return "bg-orange-100 text-orange-800 border bg-orange-100/50 border-orange-200";
+    if (status.includes("Mawdu") || status.includes("เมาฎั๊วะ"))
+        return "bg-red-100 text-red-800 border bg-red-100/50 border-red-200";
+    return "bg-gray-100 text-gray-800 border bg-gray-100/50 border-gray-200";
+}
+---
+
+<BaseLayout title={`ค้นหา "${query}" | ซุนนะห์ไทย`}>
+    <section class="container mx-auto px-4 py-8">
+        <!-- Search Header -->
+        <div class="max-w-2xl mx-auto mb-8">
+            <h1 class="text-2xl font-bold text-text mb-4">🔍 ค้นหาหะดีษ</h1>
+
+            <form method="get" class="flex gap-3">
+                <input
+                    type="text"
+                    name="q"
+                    value={query}
+                    placeholder="พิมพ์คำค้นหา..."
+                    class="input flex-1"
+                    autofocus
+                />
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
+            </form>
+        </div>
+
+        <!-- Results -->
+        {
+            query.trim() ? (
+                searchResults && searchResults.data.length > 0 ? (
+                    <div class="max-w-4xl mx-auto">
+                        <p class="text-sm text-text-muted mb-6">
+                            🌸 พบ {searchResults.total.toLocaleString()}{" "}
+                            ผลลัพธ์สำหรับ "
+                            <span class="font-medium text-primary">
+                                {query}
+                            </span>
+                            "
+                        </p>
+
+                        <div class="space-y-4">
+                            {searchResults.data.map((hadith) => {
+                                const bookInfo = BOOK_NAMES[
+                                    hadith.hadith_book
+                                ] || { th: hadith.hadith_book, icon: "📚" };
+                                const contentText =
+                                    hadith.content.th || hadith.content.ar;
+                                const highlightedContent = highlightText(
+                                    contentText,
+                                    query,
+                                );
+
+                                return (
+                                    <a
+                                        href={`/${hadith.hadith_book}?search=${encodeURIComponent(query)}`}
+                                        class="block card hover:border-primary"
+                                    >
+                                        <div class="flex items-start gap-3">
+                                            <span class="text-2xl">
+                                                {bookInfo.icon}
+                                            </span>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex items-center gap-2 mb-2">
+                                                    <span class="text-xs font-medium text-white bg-gradient-to-r from-primary to-pink px-2 py-1 rounded-pill">
+                                                        {bookInfo.th} #
+                                                        {hadith.hadith_no ||
+                                                            hadith.hadith_id}
+                                                    </span>
+                                                    {hadith.status ===
+                                                        "translated" && (
+                                                        <span class="badge badge-success text-xs">
+                                                            ✨ แปลแล้ว
+                                                        </span>
+                                                    )}
+                                                    {hadith.hadith_status && (
+                                                        <span
+                                                            class={`px-2 py-0.5 rounded-md text-xs font-medium border ${getGradeColor(hadith.hadith_status)}`}
+                                                        >
+                                                            ✅{" "}
+                                                            {
+                                                                hadith.hadith_status
+                                                            }
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <p
+                                                    class={`text-sm line-clamp-3 ${hadith.content.th ? "text-text" : "text-text-muted font-arabic"}`}
+                                                    dir={
+                                                        hadith.content.th
+                                                            ? "ltr"
+                                                            : "rtl"
+                                                    }
+                                                    set:html={
+                                                        highlightedContent
+                                                    }
+                                                />
+                                            </div>
+                                        </div>
+                                    </a>
+                                );
+                            })}
+                        </div>
+
+                        {/* Pagination */}
+                        {searchResults.total_pages > 1 && (
+                            <nav class="flex justify-center items-center gap-2 mt-8">
+                                {page > 1 && (
+                                    <a
+                                        href={`/search?q=${encodeURIComponent(query)}&page=${page - 1}`}
+                                        class="btn btn-secondary"
+                                    >
+                                        ← ก่อนหน้า
+                                    </a>
+                                )}
+                                <span class="px-4 py-2 text-text-muted">
+                                    หน้า {page} / {searchResults.total_pages}
+                                </span>
+                                {page < searchResults.total_pages && (
+                                    <a
+                                        href={`/search?q=${encodeURIComponent(query)}&page=${page + 1}`}
+                                        class="btn btn-primary"
+                                    >
+                                        ถัดไป →
+                                    </a>
+                                )}
+                            </nav>
+                        )}
+                    </div>
+                ) : (
+                    <div class="text-center py-16">
+                        <div class="text-6xl mb-4">🔍</div>
+                        <h2 class="text-xl font-bold text-text mb-2">
+                            ไม่พบผลลัพธ์
+                        </h2>
+                        <p class="text-text-muted">
+                            ลองค้นหาด้วยคำอื่น เช่น ชื่อหมวด หรือเนื้อหาหะดีษ
+                        </p>
+                    </div>
+                )
+            ) : (
+                <div class="text-center py-16">
+                    <div class="text-6xl mb-4">✨</div>
+                    <h2 class="text-xl font-bold text-text mb-2">
+                        ค้นหาหะดีษที่ต้องการ
+                    </h2>
+                    <p class="text-text-muted">
+                        พิมพ์คำค้นหาด้านบน เช่น "ละหมาด" หรือ "زكاة"
+                    </p>
+                </div>
+            )
+        }
+    </section>
+</BaseLayout>

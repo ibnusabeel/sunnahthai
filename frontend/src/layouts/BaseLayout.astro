@@ -1,0 +1,172 @@
+---
+export interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "ซุนนะห์ไทย | SunnahThai.com",
+  description = "แหล่งรวมหะดีษแปลภาษาไทย ซอเฮียะฮ์บุคอรี ซอเฮียะฮ์มุสลิม และอื่นๆ",
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0D9488" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <title>{title}</title>
+  </head>
+  <body class="min-h-screen flex flex-col">
+    <!-- Header -->
+    <header
+      class="sticky top-0 z-50 bg-surface/80 backdrop-blur-lg border-b border-border"
+    >
+      <nav
+        class="container mx-auto px-4 h-16 flex items-center justify-between"
+      >
+        <a href="/" class="flex items-center gap-3">
+          <span class="font-bold text-xl text-gradient">ซุนนะห์ไทย</span>
+        </a>
+
+        <div class="hidden md:flex items-center gap-6">
+          <a
+            href="/"
+            class="text-text-muted hover:text-primary transition-colors font-medium"
+            >หน้าแรก</a
+          >
+          <a
+            href="/articles"
+            class="text-text-muted hover:text-primary transition-colors font-medium"
+            >บทความ</a
+          >
+          <a
+            href="/about"
+            class="text-text-muted hover:text-primary transition-colors font-medium"
+            >เกี่ยวกับเรา</a
+          >
+          <a
+            href="/support"
+            class="text-text-muted hover:text-primary transition-colors font-medium"
+            >สนับสนุนเรา</a
+          >
+          <a
+            href="/contact"
+            class="text-text-muted hover:text-primary transition-colors font-medium"
+            >ติดต่อเรา</a
+          >
+        </div>
+
+        <!-- Mobile menu button -->
+        <button
+          id="mobile-menu-btn"
+          class="md:hidden p-2 text-text-muted hover:text-primary"
+          aria-label="เมนู"
+        >
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </nav>
+
+      <!-- Mobile Menu Dropdown -->
+      <div
+        id="mobile-menu"
+        class="hidden md:hidden border-t border-border bg-surface/95 backdrop-blur-lg"
+      >
+        <div class="container mx-auto px-4 py-4 flex flex-col gap-4">
+          <a
+            href="/"
+            class="text-text-muted hover:text-primary py-2 border-b border-border/50"
+            >หน้าแรก</a
+          >
+          <a
+            href="/articles"
+            class="text-text-muted hover:text-primary py-2 border-b border-border/50"
+            >บทความ</a
+          >
+          <a
+            href="/about"
+            class="text-text-muted hover:text-primary py-2 border-b border-border/50"
+            >เกี่ยวกับเรา</a
+          >
+          <a
+            href="/support"
+            class="text-text-muted hover:text-primary py-2 border-b border-border/50"
+            >สนับสนุนเรา</a
+          >
+          <a href="/contact" class="text-text-muted hover:text-primary py-2"
+            >ติดต่อเรา</a
+          >
+        </div>
+      </div>
+    </header>
+
+    <!-- Main content -->
+    <main class="flex-1">
+      <slot />
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-surface border-t border-border mt-auto">
+      <div class="container mx-auto px-4 py-8">
+        <div
+          class="flex flex-col md:flex-row items-center justify-between gap-4"
+        >
+          <div class="flex items-center gap-2 text-text-muted">
+            <span class="font-arabic text-xl text-gold">بسم الله</span>
+            <span class="text-sm">ด้วยพระนามของอัลลอฮ์</span>
+          </div>
+          <p class="text-sm text-text-light">
+            © 2026 ซุนนะห์ไทย | SunnahThai.com | พัฒนาด้วย ❤️
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Register Service Worker & Mobile Menu -->
+    <script>
+      // Mobile Menu Toggle
+      const btn = document.getElementById("mobile-menu-btn");
+      const menu = document.getElementById("mobile-menu");
+
+      if (btn && menu) {
+        btn.addEventListener("click", () => {
+          menu.classList.toggle("hidden");
+        });
+      }
+
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("/sw.js")
+            .then((reg) => console.log("SW registered"))
+            .catch((err) => console.log("SW registration failed"));
+        });
+      }
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  @import "../styles/global.css";
+</style>

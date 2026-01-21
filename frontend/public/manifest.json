@@ -1,0 +1,53 @@
+{
+    "name": "ซุนนะห์ไทย | SunnahThai",
+    "short_name": "ซุนนะห์ไทย",
+    "description": "แหล่งรวมหะดีษแปลภาษาไทย ซอเฮียะฮ์บุคอรี ซอเฮียะฮ์มุสลิม และอื่นๆ",
+    "lang": "th",
+    "dir": "ltr",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#FAFAF9",
+    "theme_color": "#0D9488",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/icons/icon-192.svg",
+            "sizes": "192x192",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-512.svg",
+            "sizes": "512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "education",
+        "books"
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "ซอเฮียะฮ์บุคอรี",
+            "url": "/bukhari",
+            "icons": [
+                {
+                    "src": "/icons/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "ซอเฮียะฮ์มุสลิม",
+            "url": "/muslim",
+            "icons": [
+                {
+                    "src": "/icons/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ]
+}

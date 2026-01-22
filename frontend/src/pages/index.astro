@@ -182,23 +182,6 @@ try {
 							placeholder="🔍 ค้นหาหะดีษ..."
 							class="input pl-5 pr-4 py-4 text-lg shadow-soft bg-white/80 flex-1 rounded-2xl border-none"
 						/>
-						<select
-							name="book"
-							class="select bg-white/80 shadow-soft text-lg py-4 pl-4 pr-8 border-none rounded-2xl w-1/3 text-text"
-						>
-							<option value="">ทุกเล่ม 📚</option>
-							{
-								MAIN_BOOKS.map((key) => (
-									<option value={key}>
-										{bookNames[key]?.th ||
-											BOOK_NAMES[key]?.th}
-									</option>
-								))
-							}
-						</select>
-						<button type="submit" class="btn btn-primary"
-							>ค้นหา</button
-						>
 					</div>
 				</form>
 			</div>

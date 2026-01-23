@@ -63,10 +63,12 @@ async function populateAdabKitabs() {
             await kitabsCollection.insertOne({
                 kitab_id: crypto.randomUUID(),
                 book: 'adab',
-                id: parseInt(kitab.id),
-                ar: kitab.ar,
-                th: kitab.th,
-                en: '',
+                order: parseInt(kitab.id),
+                name: {
+                    ar: kitab.ar,
+                    th: kitab.th,
+                    en: ''
+                },
                 hadith_count: count,
                 created_at: new Date(),
                 updated_at: new Date()

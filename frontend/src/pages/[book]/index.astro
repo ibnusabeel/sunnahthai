@@ -310,43 +310,73 @@ function getGradeThai(status: string): string {
                     {/* Decorative background */}
                     <div class="absolute top-0 right-0 w-16 h-16 bg-pink-light/30 rounded-full blur-2xl -translate-y-4 translate-x-4" />
 
-                    <div class="relative flex items-center gap-3">
-                      {/* Icon */}
-                      <div class="w-10 h-10 flex-shrink-0 rounded-full bg-white/80 shadow-sm flex items-center justify-center">
-                        <span class="text-lg">📖</span>
+                    <div class="relative">
+                      {/* Kitab */}
+                      <div class="flex items-center gap-3 mb-2">
+                        <div class="w-8 h-8 flex-shrink-0 rounded-full bg-white/80 shadow-sm flex items-center justify-center">
+                          <span class="text-sm">📖</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          {hadith.kitab.ar && (
+                            <span class="font-arabic text-lg text-primary" dir="rtl">
+                              {hadith.kitab.ar}
+                            </span>
+                          )}
+                          {hadith.kitab.th && (
+                            <span class="text-sm text-text-muted ml-2">
+                              🌸 {hadith.kitab.th}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Text Content */}
-                      <div class="flex-1 min-w-0">
-                        {/* Arabic name if exists */}
-                        {hadith.kitab.ar && (
-                          <div
-                            class="font-arabic text-xl text-primary md:float-right text-base leading-relaxed"
-                            dir="rtl"
-                          >
-                            {hadith.kitab.ar}
+                      {/* Bab (h2_title) */}
+                      {(hadith.bab?.ar || hadith.bab?.th) && (
+                        <div class="flex items-center gap-3 mt-2 pl-11">
+                          <div class="flex-1 min-w-0 text-sm">
+                            {hadith.bab.ar && (
+                              <span class="font-arabic text-base text-text-muted" dir="rtl">
+                                {hadith.bab.ar}
+                              </span>
+                            )}
+                            {hadith.bab.th && (
+                              <span class="text-text-light ml-2">
+                                📁 {hadith.bab.th}
+                              </span>
+                            )}
                           </div>
-                        )}
-                        {/* Thai name */}
-                        {hadith.kitab.th && (
-                          <div
-                            class={`md:float-left text-sm ${hadith.kitab.ar ? "text-text-muted mt-1" : "text-primary font-medium"}`}
-                          >
-                            🌸 {hadith.kitab.th}
-                          </div>
-                        )}
-                        {/* English name (fallback if no Thai) */}
-                        {!hadith.kitab.th && hadith.kitab.en && (
-                          <div
-                            class={`text-sm ${hadith.kitab.ar ? "text-text-muted mt-1" : "text-primary font-medium"}`}
-                          >
-                            📚 {hadith.kitab.en}
-                          </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
+
+                {/* Title - if exists and has actual content */}
+                {/* Title - if exists and has actual content (excluding "null" string) */}
+                {(() => {
+                  const arTitle = hadith.title?.ar?.trim();
+                  const thTitle = hadith.title?.th?.trim();
+                  const isArValid = arTitle && arTitle.toLowerCase() !== 'null';
+                  const isThValid = thTitle && thTitle.toLowerCase() !== 'null';
+                  
+                  if (!isArValid && !isThValid) return null;
+
+                  return (
+                    <div class="mb-4 p-3 bg-amber-50/70 rounded-lg border border-amber-200/50">
+                      <div class="text-xs font-medium text-amber-700 mb-1">📌 หัวข้อหะดีษ</div>
+                      {isArValid && (
+                        <div class="font-arabic text-base text-amber-900" dir="rtl">
+                          {hadith.title?.ar}
+                        </div>
+                      )}
+                      {isThValid && (
+                        <div class="text-sm text-amber-800 mt-1">
+                          {hadith.title?.th}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Split Layout: Thai LEFT, Arabic RIGHT */}
                 <div class="hadith-content-split">
@@ -357,6 +387,12 @@ function getGradeThai(status: string): string {
                         <div class="text-xs font-medium text-emerald-600 mb-2 flex items-center gap-1">
                           🇹🇭 คำแปลภาษาไทย
                         </div>
+                        {/* Thai Chain - lighter */}
+                        {hadith.chain?.th && (
+                          <div class="text-text-light/70 text-xs italic mb-2">
+                            {hadith.chain.th}
+                          </div>
+                        )}
                         {search ? (
                           <span
                             set:html={highlightText(hadith.content.th, search)}
@@ -380,6 +416,12 @@ function getGradeThai(status: string): string {
                       <div class="text-xs font-medium text-primary mb-2 flex items-center justify-end gap-1">
                         النص العربي 🕌
                       </div>
+                      {/* Arabic Chain - lighter */}
+                      {hadith.chain?.ar && (
+                        <div class="font-arabic text-primary/90 text-xl leading-relaxed mb-2" dir="rtl">
+                          {hadith.chain.ar}
+                        </div>
+                      )}
                       {search ? (
                         <span
                           set:html={highlightText(hadith.content.ar, search)}
@@ -393,13 +435,20 @@ function getGradeThai(status: string): string {
 
                 {/* Footer - Status & Actions */}
                 <div class="mt-4 pt-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-                  {/* Status */}
-                  <div>
-                    {hadith.hadith_status && (
+                  {/* Grade + Grader */}
+                  <div class="flex flex-wrap items-center gap-2">
+                    {/* Grade badge */}
+                    {(hadith.grade?.ar || hadith.hadith_status) && (
                       <span
-                        class={`px-4 py-2 rounded-xl text-sm font-semibold border-2 ${getGradeColor(hadith.hadith_status)}`}
+                        class={`px-3 py-1.5 rounded-xl text-sm font-semibold border ${getGradeColor(hadith.hadith_status || '')}`}
                       >
-                        ✅ {getGradeThai(hadith.hadith_status)}
+                        ✅ {hadith.grade?.ar || getGradeThai(hadith.hadith_status || '')}
+                      </span>
+                    )}
+                    {/* Grader */}
+                    {hadith.grader?.shortName?.ar && (
+                      <span class="px-3 py-1.5 rounded-xl text-sm bg-slate-100 text-slate-700 border border-slate-200 font-arabic">
+                        👤 {hadith.grader.shortName.ar}
                       </span>
                     )}
                   </div>

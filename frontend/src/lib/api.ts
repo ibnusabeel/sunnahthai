@@ -13,8 +13,17 @@ export interface HadithItem {
     hadith_book: string;
     hadith_no?: string;
     kitab: { ar: string; th?: string; en?: string };
-    bab: { ar: string; th?: string; en?: string };
+    bab?: { ar?: string; th?: string; en?: string };
+    title?: { ar?: string; th?: string };
+    chain?: { ar?: string; th?: string };
     content: { ar: string; th?: string };
+    footnote?: { ar?: string; th?: string };
+    grade?: { ar?: string; th?: string };
+    grader?: {
+        shortName?: { ar?: string };
+        fullName?: { ar?: string };
+    };
+    grade_grades?: string;
     status: 'pending' | 'translated';
     last_updated?: string;
     hadith_status?: string; // New field for grade (Sahih, Hasan, etc.)
@@ -135,6 +144,8 @@ export const BOOK_NAMES: Record<string, { th: string; ar: string; icon: string }
     malik: { th: 'มุวัตตอ อิหม่ามมาลิก', ar: 'موطأ الإمام مالك', icon: '📜' },
     darimi: { th: 'สุนันดาริมี', ar: 'سنن الدارمي', icon: '📚' },
     ahmad: { th: 'มุสนัด อะห์มัด', ar: 'مسند أحمد', icon: '📗' },
+    adab: { th: 'อัล-อะดับ อัล-มุฟร็อด', ar: 'الأدب المفرد', icon: '📓' },
+    lulu: { th: 'อัล-ลุ\'ลุ\' วัล-มัรญาน', ar: 'اللؤلؤ والمرجان', icon: '💎' },
 };
 
 export interface BookInfo {

@@ -53,7 +53,20 @@ const kitabsRoutes: FastifyPluginAsync = async (fastify) => {
                         min_hadith: { $min: '$hadith_no_int' }
                     }
                 },
-                { $sort: { id: 1, min_hadith: 1, '_id.th': 1 } }
+                { $sort: { id: 1, min_hadith: 1, '_id.th': 1 } },
+                {
+                    $addFields: {
+                        id_int: {
+                            $convert: {
+                                input: '$id',
+                                to: 'int',
+                                onError: 9999,
+                                onNull: 9999
+                            }
+                        }
+                    }
+                },
+                { $sort: { id_int: 1, min_hadith: 1, '_id.th': 1 } }
             ];
 
             const result = await translationsCollection.aggregate(pipeline).toArray();

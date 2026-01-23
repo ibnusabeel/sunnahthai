@@ -50,6 +50,9 @@ const hadithsRoutes: FastifyPluginAsync = async (fastify) => {
         const status = query.status || '';
         const kitab = query.kitab || '';
 
+        // Calculate skip early, before any try/catch blocks
+        const skip = (page - 1) * limit;
+
         try {
             const collection = await getCollection('translations');
             const conditions: any[] = [];
@@ -78,6 +81,45 @@ const hadithsRoutes: FastifyPluginAsync = async (fastify) => {
 
             // Search filter
             if (search) {
+                try {
+                    // Try Meilisearch first
+                    const { meiliClient, INDEX_NAME } = await import('../config/meili.js');
+                    const index = meiliClient.index(INDEX_NAME);
+
+                    // Build Meili filters
+                    const filters = [];
+                    if (targetBook) filters.push(`hadith_book = "${targetBook}"`);
+                    if (status) filters.push(`status = "${status}"`);
+                    // Kitab filter in Meili might need exact match or simplified
+
+                    const searchParams: any = {
+                        limit: limit,
+                        offset: skip,
+                        filter: filters.length > 0 ? filters.join(' AND ') : undefined,
+                        attributesToHighlight: ['content.th', 'content.ar']
+                    };
+
+                    const searchResults = await index.search(search, searchParams);
+
+                    // If we got results, return them
+                    if (searchResults) {
+                        const totalHits = searchResults.estimatedTotalHits || 0;
+                        return {
+                            book,
+                            data: searchResults.hits,
+                            page,
+                            limit,
+                            total: totalHits,
+                            total_pages: Math.ceil(totalHits / limit),
+                            provider: 'meilisearch'
+                        };
+                    }
+                } catch (meiliError) {
+                    // console.warn('Meilisearch failed, falling back to MongoDB:', meiliError);
+                    // Fallback to MongoDB Regex below
+                }
+
+                // MongoDB Regex Fallback
                 const searchRegex = { $regex: search, $options: 'i' };
                 conditions.push({
                     $or: [
@@ -94,8 +136,6 @@ const hadithsRoutes: FastifyPluginAsync = async (fastify) => {
             const mongoQuery = conditions.length > 0
                 ? (conditions.length > 1 ? { $and: conditions } : conditions[0])
                 : {};
-
-            const skip = (page - 1) * limit;
 
             const [data, total] = await Promise.all([
                 collection.find(mongoQuery)

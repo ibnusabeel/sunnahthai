@@ -9,7 +9,7 @@ import {
 	type BookItem,
 } from "../lib/api";
 
-// Main 6 books
+// Main books
 const MAIN_BOOKS = [
 	"bukhari",
 	"muslim",
@@ -53,24 +53,13 @@ const COMING_SOON_BOOKS = [
 		count: 22000,
 		icon: "📓",
 	},
-	{
-		th: "อัล-ลุ'ลุ' วัล-มัรญาน",
-		ar: "اللؤلؤ والمرجان",
-		count: 1906,
-		icon: "💎",
-	},
-	{
-		th: "อัล-อะดับ อัล-มุฟร็อด",
-		ar: "الأدَبُ المُفْرَد",
-		count: 1322,
-		icon: "📔",
-	},
 ];
 
 // Book colors for pastel cards
 const bookColors: Record<string, string> = {
 	bukhari: "from-mint-soft to-mint-light border-mint",
 	muslim: "from-sky-soft to-sky-light border-sky",
+	lulu: "from-amber-100 to-amber-50 border-amber-300", // Gold/Amber theme for "Pearl & Coral"
 	nasai: "from-peach-soft to-peach-light border-peach",
 	tirmidhi: "from-pink-soft to-pink-light border-pink",
 	abudawud: "from-primary-soft to-lavender-light border-primary-light",
@@ -122,7 +111,7 @@ try {
 				: 0;
 	}
 
-	const PREFERRED_ORDER = ["malik", "darimi", "ahmad"];
+	const PREFERRED_ORDER = ["lulu", "malik", "darimi", "ahmad"];
 
 	otherBooks = booksData.books
 		.filter((b) => !MAIN_BOOKS.includes(b.book))

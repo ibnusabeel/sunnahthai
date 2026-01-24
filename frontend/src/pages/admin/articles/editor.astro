@@ -1,106 +1,193 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import { getArticle, getCategories } from "../../../lib/api";
+import { API_BASE_URL } from "../../../lib/api";
 
 const id = Astro.url.searchParams.get("id");
+const isEdit = !!id;
+
+// Fetch article data if editing
 let article: any = null;
 let categories: any[] = [];
 
 try {
-    const res = await getCategories();
-    categories = res.categories;
+    // Fetch categories
+    const catRes = await fetch(`${API_BASE_URL}/api/categories`);
+    if (catRes.ok) {
+        const catData = await catRes.json();
+        categories = catData.categories || [];
+    }
 
+    // Fetch article if editing
     if (id) {
-        article = await getArticle(id);
+        const artRes = await fetch(`${API_BASE_URL}/api/articles/${id}`);
+        if (artRes.ok) {
+            article = await artRes.json();
+        }
     }
 } catch (e) {
     console.error("Error loading editor data:", e);
 }
-
-const isEdit = !!article;
 ---
 
 <AdminLayout title={isEdit ? "แก้ไขบทความ" : "เขียนบทความใหม่"}>
-    <link
-        href="https://cdn.quilljs.com/1.3.6/quill.snow.css"
-        rel="stylesheet"
-    />
+    <style>
+        .editor-card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+        }
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition:
+                border-color 0.2s,
+                box-shadow 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition:
+                transform 0.2s,
+                box-shadow 0.2s;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        .btn-secondary {
+            background: white;
+            color: #6b7280;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 500;
+            border: 1px solid #e5e7eb;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-secondary:hover {
+            background: #f9fafb;
+        }
+        .tox-tinymce {
+            border-radius: 0.5rem !important;
+            border: 1px solid #e5e7eb !important;
+        }
+        .cover-dropzone {
+            border: 2px dashed #d1d5db;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition:
+                border-color 0.2s,
+                background 0.2s;
+        }
+        .cover-dropzone:hover {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        .cover-preview {
+            position: relative;
+            border-radius: 0.75rem;
+            overflow: hidden;
+        }
+        .cover-preview img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+        }
+        .cover-remove {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
 
+    <!-- Header -->
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-gray-800">
-            {isEdit ? "แก้ไขบทความ" : "เขียนบทความใหม่"}
+            {isEdit ? "✏️ แก้ไขบทความ" : "📝 เขียนบทความใหม่"}
         </h1>
         <div class="flex gap-3">
-            <a
-                href="/admin/articles"
-                class="px-4 py-2 bg-white text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
-            >
-                ยกเลิก
-            </a>
-            <button
-                id="save-btn"
-                class="px-6 py-2 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors font-bold shadow-lg shadow-primary/30 flex items-center gap-2"
-            >
-                <span>💾</span> บันทึก
-            </button>
+            <a href="/admin/articles" class="btn-secondary">ยกเลิก</a>
+            <button id="save-btn" class="btn-primary">💾 บันทึก</button>
         </div>
     </div>
 
+    <!-- Editor Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Main Editor -->
+        <!-- Main Content -->
         <div class="lg:col-span-2 space-y-6">
-            <div
-                class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm"
-            >
+            <div class="editor-card">
+                <label class="form-label">หัวข้อบทความ</label>
                 <input
                     type="text"
                     id="title"
-                    class="w-full text-3xl font-bold placeholder-gray-300 border-none outline-none focus:ring-0 p-0 text-gray-800"
+                    class="form-input text-xl font-semibold"
                     placeholder="ใส่หัวข้อเรื่องที่นี่..."
                     value={article?.title || ""}
-                    oninput="generateSlug(this.value)"
                 />
-                <div class="h-px bg-gray-100 my-4"></div>
+            </div>
 
-                <!-- Toolbar for Quill -->
-                <div id="editor-container" class="h-[500px] text-lg"></div>
-                <input
-                    type="hidden"
-                    id="content"
-                    value={article?.content || ""}
-                />
+            <div class="editor-card">
+                <label class="form-label">เนื้อหา</label>
+                <textarea id="content" style="min-height: 400px;"
+                    >{article?.content || ""}</textarea
+                >
             </div>
         </div>
 
-        <!-- Sidebar Settings -->
+        <!-- Sidebar -->
         <div class="space-y-6">
-            <!-- Publish Settings -->
-            <div
-                class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4"
-            >
-                <h3 class="font-bold text-gray-800">การตั้งค่า</h3>
+            <!-- Settings -->
+            <div class="editor-card space-y-4">
+                <h3 class="font-bold text-gray-800">⚙️ การตั้งค่า</h3>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1"
-                        >Slug (URL)</label
-                    >
+                    <label class="form-label">Slug (URL)</label>
                     <input
                         type="text"
                         id="slug"
-                        class="w-full px-3 py-2 bg-gray-50 text-gray-600 rounded-lg border border-gray-200 text-sm font-mono focus:ring-2 focus:ring-primary outline-none"
+                        class="form-input font-mono text-sm"
+                        placeholder="article-slug"
                         value={article?.slug || ""}
-                        data-modified={isEdit ? "true" : ""}
                     />
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1"
-                        >หมวดหมู่</label
-                    >
-                    <select
-                        id="category"
-                        class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white focus:ring-2 focus:ring-primary outline-none"
-                    >
+                    <label class="form-label">หมวดหมู่</label>
+                    <select id="category" class="form-input">
                         <option value="uncategorized">ไม่ระบุหมวดหมู่</option>
                         {
                             categories.map((c: any) => (
@@ -116,66 +203,47 @@ const isEdit = !!article;
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1"
-                        >สถานะ</label
-                    >
-                    <select
-                        id="status"
-                        class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white focus:ring-2 focus:ring-primary outline-none"
-                    >
+                    <label class="form-label">สถานะ</label>
+                    <select id="status" class="form-input">
                         <option
                             value="draft"
                             selected={article?.status === "draft"}
-                            >แบบร่าง (Draft)</option
+                            >📝 แบบร่าง</option
                         >
                         <option
                             value="published"
                             selected={article?.status === "published"}
-                            >เผยแพร่ (Published)</option
+                            >✅ เผยแพร่</option
                         >
                     </select>
                 </div>
             </div>
 
             <!-- Cover Image -->
-            <div
-                class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4"
-            >
-                <h3 class="font-bold text-gray-800">รูปปก (Cover Image)</h3>
+            <div class="editor-card space-y-4">
+                <h3 class="font-bold text-gray-800">🖼️ รูปปก</h3>
 
-                <div
-                    id="dropzone"
-                    class="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors relative group"
-                >
-                    <input
-                        type="file"
-                        id="cover-upload"
-                        class="hidden"
-                        accept="image/*"
-                    />
-                    <div
-                        id="cover-preview"
-                        class={article?.cover_image ? "" : "hidden"}
-                    >
-                        <img
-                            src={article?.cover_image || ""}
-                            id="preview-img"
-                            class="w-full h-40 object-cover rounded-lg"
+                <div id="cover-wrapper">
+                    <div id="cover-dropzone" class="cover-dropzone">
+                        <input
+                            type="file"
+                            id="cover-input"
+                            accept="image/*"
+                            class="hidden"
                         />
-                        <button
-                            id="remove-cover"
-                            class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            >×</button
-                        >
-                    </div>
-                    <div
-                        id="upload-placeholder"
-                        class={article?.cover_image ? "hidden" : "py-8"}
-                    >
                         <div class="text-4xl mb-2">📷</div>
                         <p class="text-sm text-gray-500">
                             คลิกเพื่ออัปโหลดรูปภาพ
                         </p>
+                    </div>
+                    <div id="cover-preview" class="cover-preview hidden">
+                        <img
+                            id="cover-img"
+                            src={article?.cover_image || ""}
+                            alt="Cover"
+                        />
+                        <button id="cover-remove" class="cover-remove">×</button
+                        >
                     </div>
                 </div>
                 <input
@@ -186,216 +254,175 @@ const isEdit = !!article;
             </div>
         </div>
     </div>
-</AdminLayout>
 
-<script define:vars={{ id, isEdit }}>
-    import {
-        createArticle,
-        updateArticle,
-        uploadImage,
-    } from "../../../lib/api";
+    <!-- TinyMCE CDN -->
+    <script
+        is:inline
+        src="https://cdn.tiny.cloud/1/4o3zqqgy417yz3i7q2pwiph5qcftrg07mx1csfkhncpdhsgl/tinymce/6/tinymce.min.js"
+        referrerpolicy="origin"></script>
 
-    // Initialize Quill with retry mechanism
-    function initQuill() {
-        if (typeof Quill === "undefined") {
-            setTimeout(initQuill, 100);
-            return;
-        }
-
-        const toolbarOptions = [
-            [{ header: [1, 2, 3, false] }],
-            ["bold", "italic", "underline", "strike"],
-            ["blockquote", "code-block"],
-            [{ list: "ordered" }, { list: "bullet" }],
-            [{ color: [] }, { background: [] }],
-            ["link", "image", "video"],
-            ["clean"],
-        ];
-
-        window.quill = new Quill("#editor-container", {
-            theme: "snow",
-            modules: {
-                toolbar: {
-                    container: toolbarOptions,
-                    handlers: {
-                        image: imageHandler,
-                    },
-                },
-            },
-            placeholder: "เขียนเนื้อหาบทความที่นี่...",
-        });
-
-        // Set initial content
-        const contentInput = document.getElementById("content");
-        if (contentInput && contentInput.value) {
-            window.quill.root.innerHTML = contentInput.value;
-        }
-    }
-
-    // Load Quill Script dynamically if not present
-    if (!document.getElementById("quill-script")) {
-        const script = document.createElement("script");
-        script.id = "quill-script";
-        script.src = "https://cdn.quilljs.com/1.3.6/quill.js";
-        script.onload = initQuill;
-        document.head.appendChild(script);
-    } else {
-        initQuill();
-    }
-
-    // Custom Image Handler for Quill
-    function imageHandler() {
-        const input = document.createElement("input");
-        input.setAttribute("type", "file");
-        input.setAttribute("accept", "image/*");
-        input.click();
-
-        input.onchange = async () => {
-            const file = input.files[0];
-            if (/^image\//.test(file.type)) {
-                try {
-                    // Upload to server
-                    const result = await uploadImage(file);
-                    const range = window.quill.getSelection();
-
-                    // Insert image into editor
-                    // Use API_BASE_URL prefix if needed, but since we modify API_BASE_URL in api.ts locally,
-                    // and upload returns /uploads/..., we might need full URL if frontend/backend distinct domains
-                    // Assuming relative is fine or api returns full relative path. // Ideally absolute for safe rendering everywhere
-                    // For now, let's use the returned url directly (likely /uploads/...)
-                    // If frontend is on 4321 and backend 3000, we need to prepend API_URL if it's served by backend static
-                    // Let's assume user visits 4321, /uploads is NOT proxy to 3000 unless configured in Astro config.
-                    // Important: Astro doesn't proxy /uploads by default.
-                    // So we must prepend API_BASE_URL to the image src.
-
-                    // Actually, let's hardcode localhost:3000 for now or fetch from env.
-                    // Or better, let's make a proxy in astro config for /uploads -> localhost:3000.
-                    // But easier is strictly full URL.
-
-                    // Current setup: Frontend 4321, Backend 3000.
-                    // Image URL from API: /uploads/xxx.jpg
-                    // Need: http://localhost:3000/uploads/xxx.jpg
-
-                    const fullUrl = `http://localhost:3000${result.url}`; // TODO: Use robust env var
-
-                    window.quill.insertEmbed(range.index, "image", fullUrl);
-                } catch (e) {
-                    console.error("Upload failed:", e);
-                    alert("อัปโหลดรูปไม่สำเร็จ");
-                }
-            } else {
-                alert("เลือกไฟล์รูปภาพเท่านั้น");
-            }
-        };
-    }
-
-    // Slug Generator
-    window.generateSlug = (value) => {
-        const slugInput = document.getElementById("slug");
-        if (
-            !slugInput.value ||
-            slugInput.getAttribute("data-modified") !== "true"
-        ) {
-            slugInput.value = value
-                .toLowerCase()
-                .replace(/ /g, "-")
-                .replace(/[^\w-]+/g, "") // Keep thai chars? No, simple slug usually ascii.
-                // If Thai, maybe keep it?
-                // For simplicity, let's keep only basic ASCII. If user wants thai slug, they type it manually.
-                // Or better, simple regex that creates safe URL.
-                .replace(/[^\w\u0E00-\u0E7F\-]+/g, ""); // Allow Thai chars
-        }
-    };
-
-    document.getElementById("slug")?.addEventListener("input", function () {
-        this.setAttribute("data-modified", "true");
-    });
-
-    // Cover Image Upload logic
-    const dropzone = document.getElementById("dropzone");
-    const coverInput = document.getElementById("cover-upload");
-    const coverPreview = document.getElementById("cover-preview");
-    const previewImg = document.getElementById("preview-img");
-    const uploadPlaceholder = document.getElementById("upload-placeholder");
-    const removeCoverBtn = document.getElementById("remove-cover");
-    const coverValueInput = document.getElementById("cover_image");
-
-    if (dropzone) {
-        dropzone.onclick = (e) => {
-            if (e.target !== removeCoverBtn) coverInput.click();
-        };
-    }
-
-    if (coverInput) {
-        coverInput.onchange = async (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                try {
-                    const result = await uploadImage(file);
-                    const fullUrl = `http://localhost:3000${result.url}`;
-                    previewImg.src = fullUrl;
-                    coverValueInput.value = fullUrl;
-
-                    coverPreview.classList.remove("hidden");
-                    uploadPlaceholder.classList.add("hidden");
-                } catch (error) {
-                    alert("อัปโหลดไม่สำเร็จ");
-                }
-            }
-        };
-    }
-
-    if (removeCoverBtn) {
-        removeCoverBtn.onclick = () => {
-            coverValueInput.value = "";
-            previewImg.src = "";
-            coverPreview.classList.add("hidden");
-            uploadPlaceholder.classList.remove("hidden");
-            coverInput.value = ""; // Reset input
-        };
-    }
-
-    // Save Logic
-    const saveBtn = document.getElementById("save-btn");
-    if (saveBtn) {
-        saveBtn.onclick = async () => {
-            const title = document.getElementById("title").value;
-            const slug = document.getElementById("slug").value;
-            const category = document.getElementById("category").value;
-            const status = document.getElementById("status").value;
-            const cover_image = document.getElementById("cover_image").value;
-
-            // Get content safely
-            const content = window.quill ? window.quill.root.innerHTML : "";
-
-            if (!title || !slug) {
-                alert("กรุณาระบุหัวข้อและ Slug");
+    <!-- Page Script -->
+    <script is:inline define:vars={{ id, isEdit, API_BASE_URL }}>
+        // Initialize TinyMCE
+        function initTinyMCE() {
+            if (typeof tinymce === "undefined") {
+                console.log("Waiting for TinyMCE...");
+                setTimeout(initTinyMCE, 200);
                 return;
             }
 
-            const data = {
-                title,
-                slug,
-                category,
-                status,
-                cover_image,
-                content,
-            };
-            console.log("Saving article:", data);
+            tinymce.init({
+                selector: "#content",
+                height: 450,
+                menubar: false,
+                plugins: "lists link image table code fullscreen preview",
+                toolbar:
+                    "undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link image | code fullscreen",
+                content_style:
+                    "body { font-family: Sarabun, sans-serif; font-size: 16px; line-height: 1.8; }",
+                placeholder: "เขียนเนื้อหาบทความที่นี่...",
+                branding: false,
+                promotion: false,
+                setup: function (editor) {
+                    editor.on("init", function () {
+                        console.log("TinyMCE initialized successfully");
+                    });
+                },
+            });
+        }
 
-            try {
-                if (isEdit) {
-                    await updateArticle(id, data);
-                    alert("อัปเดตบทความเรียบร้อย");
-                } else {
-                    await createArticle(data);
-                    alert("สร้างบทความเรียบร้อย");
+        document.addEventListener("DOMContentLoaded", function () {
+            initTinyMCE();
+
+            // Auto-generate slug from title
+            const titleInput = document.getElementById("title");
+            const slugInput = document.getElementById("slug");
+            let slugEdited = !!slugInput.value;
+
+            titleInput.addEventListener("input", function () {
+                if (!slugEdited) {
+                    slugInput.value = this.value
+                        .toLowerCase()
+                        .replace(/\s+/g, "-")
+                        .replace(/[^a-z0-9\-]/g, "")
+                        .substring(0, 100);
                 }
-                window.location.href = "/admin/articles";
-            } catch (e) {
-                console.error(e);
-                alert("บันทึกไม่สำเร็จ: " + e.message);
+            });
+
+            slugInput.addEventListener("input", function () {
+                slugEdited = true;
+            });
+
+            // Cover image upload
+            const dropzone = document.getElementById("cover-dropzone");
+            const coverInput = document.getElementById("cover-input");
+            const coverPreview = document.getElementById("cover-preview");
+            const coverImg = document.getElementById("cover-img");
+            const coverRemove = document.getElementById("cover-remove");
+            const coverValue = document.getElementById("cover_image");
+
+            dropzone.addEventListener("click", () => coverInput.click());
+
+            coverInput.addEventListener("change", async function (e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const formData = new FormData();
+                formData.append("file", file);
+
+                try {
+                    const res = await fetch(API_BASE_URL + "/api/upload", {
+                        method: "POST",
+                        body: formData,
+                    });
+                    if (!res.ok) throw new Error("Upload failed");
+                    const data = await res.json();
+                    const url = API_BASE_URL + data.url;
+
+                    coverImg.src = url;
+                    coverValue.value = url;
+                    dropzone.classList.add("hidden");
+                    coverPreview.classList.remove("hidden");
+                } catch (err) {
+                    alert("อัปโหลดรูปไม่สำเร็จ: " + err.message);
+                }
+            });
+
+            coverRemove.addEventListener("click", function () {
+                coverImg.src = "";
+                coverValue.value = "";
+                coverPreview.classList.add("hidden");
+                dropzone.classList.remove("hidden");
+                coverInput.value = "";
+            });
+
+            // Show preview if cover exists
+            if (coverValue.value) {
+                dropzone.classList.add("hidden");
+                coverPreview.classList.remove("hidden");
             }
-        };
-    }
-</script>
+
+            // Save article
+            document
+                .getElementById("save-btn")
+                .addEventListener("click", async function () {
+                    const title = document.getElementById("title").value.trim();
+                    const slug = document.getElementById("slug").value.trim();
+                    const category = document.getElementById("category").value;
+                    const status = document.getElementById("status").value;
+                    const cover_image =
+                        document.getElementById("cover_image").value;
+
+                    // Get content from TinyMCE
+                    const content = tinymce.get("content")
+                        ? tinymce.get("content").getContent()
+                        : "";
+
+                    if (!title) {
+                        alert("กรุณาระบุหัวข้อบทความ");
+                        return;
+                    }
+                    if (!slug) {
+                        alert("กรุณาระบุ Slug");
+                        return;
+                    }
+
+                    const payload = {
+                        title,
+                        slug,
+                        category,
+                        status,
+                        cover_image,
+                        content,
+                    };
+                    console.log("Saving:", payload);
+
+                    try {
+                        const url = isEdit
+                            ? API_BASE_URL + "/api/articles/" + id
+                            : API_BASE_URL + "/api/articles";
+
+                        const res = await fetch(url, {
+                            method: isEdit ? "PUT" : "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payload),
+                        });
+
+                        if (!res.ok) {
+                            const err = await res.json();
+                            throw new Error(err.error || "Failed to save");
+                        }
+
+                        alert(
+                            isEdit
+                                ? "อัปเดตบทความเรียบร้อย"
+                                : "สร้างบทความเรียบร้อย",
+                        );
+                        window.location.href = "/admin/articles";
+                    } catch (err) {
+                        alert("บันทึกไม่สำเร็จ: " + err.message);
+                    }
+                });
+        });
+    </script>
+</AdminLayout>

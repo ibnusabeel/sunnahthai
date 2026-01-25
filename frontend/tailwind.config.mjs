@@ -47,9 +47,9 @@ export default {
                 border: '#F3E8FF',    // Purple-100
             },
             fontFamily: {
-                thai: ['Noto Sans Thai', 'sans-serif'],
+                thai: ['IBM Plex Sans Thai Looped', 'sans-serif'],
                 arabic: ['UthmanTN', 'Amiri', 'serif'],
-                sans: ['Inter', 'Noto Sans Thai', 'sans-serif'],
+                sans: ['Inter', 'IBM Plex Sans Thai Looped', 'sans-serif'],
             },
             borderRadius: {
                 'cute': '1.25rem',

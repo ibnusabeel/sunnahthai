@@ -204,17 +204,23 @@ async function generateTranslation(hadith: Hadith, retries: number = 2): Promise
         ? hadith.content.ar.substring(0, maxContentLen) + '...'
         : hadith.content.ar;
 
-    const prompt = `แปลหะดีษนี้เป็นไทย ตอบ JSON อย่างเดียว:
+    const prompt = `Translate this Hadith to Thai. Return ONLY raw JSON without markdown formatting.
 
-${hadith.bab?.ar ? `บาบ: ${hadith.bab.ar}` : ''}
-${hadith.chain?.ar ? `สายรายงาน: ${hadith.chain.ar}` : ''}
-เนื้อหา: ${contentAr}
+Ar Bab: ${hadith.bab?.ar || '-'}
+Ar Chain: ${hadith.chain?.ar || '-'}
+Ar Content: ${contentAr}
 
-{"bab":"แปลบาบ","chain":"ถอดเสียงนักรายงาน เช่น อะหฺมัด > อิบนุ อุมัร","content":"แปลเนื้อหา"}`;
+Required JSON Format:
+{
+  "bab": "Thai translation of Bab (or null)",
+  "chain": "Thai transliteration of Chain (or null)",
+  "content": "Thai translation of Content"
+}`;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
+        let text = '';
         try {
-            const text = await callDeepSeek(prompt);
+            text = await callDeepSeek(prompt);
 
             // Clean markdown code blocks
             let cleanText = text
@@ -231,6 +237,11 @@ ${hadith.chain?.ar ? `สายรายงาน: ${hadith.chain.ar}` : ''}
                 console.log(`   ⚠️ JSON error, retrying (${attempt + 1}/${retries})...`);
                 await delay(2000);
                 continue;
+            }
+
+            // Log raw response on final failure
+            if (error.message?.includes('JSON') || error instanceof SyntaxError) {
+                console.log(`   ❌ JSON Parse Error. Raw response:\n${text}`);
             }
             throw error;
         }

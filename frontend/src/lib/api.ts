@@ -12,7 +12,7 @@ export interface HadithItem {
     hadith_id: string;
     hadith_book: string;
     hadith_no?: string;
-    kitab: { ar: string; th?: string; en?: string };
+    kitab: { id?: number; ar: string; th?: string; en?: string };
     bab?: { ar?: string; th?: string; en?: string };
     title?: { ar?: string; th?: string };
     chain?: { ar?: string; th?: string };
@@ -50,11 +50,20 @@ export interface HadithsResponse {
 
 export interface KitabItem {
     kitab_id?: string;
-    ar: string;
-    th: string;
-    en?: string;
+    // Normalized stats
     id?: number;
     hadith_count?: number;
+    // DB structure uses name object
+    name?: {
+        ar?: string;
+        th?: string;
+        en?: string;
+    };
+    // Legacy support or flattened support?
+    // Let's stick to name object as primary
+    ar?: string;
+    th?: string;
+    en?: string;
 }
 
 export interface KitabsResponse {
@@ -108,7 +117,6 @@ export async function getHadiths(options: {
         ...(status && { status }),
         ...(kitab && { kitab }),
     });
-
 
     const url = book
         ? `${API_BASE_URL}/api/hadiths/${book}?${params}`
@@ -184,7 +192,15 @@ export async function getDynamicBookNames(): Promise<Record<string, { th: string
                 merged[key] = {
                     ...merged[key],
                     th: val.th || merged[key].th,
-                    ar: val.ar || merged[key].ar
+                    ar: val.ar || merged[key].ar,
+                    icon: val.icon || merged[key].icon // Also map icon if available
+                };
+            } else {
+                // Add new book if not in default list
+                merged[key] = {
+                    th: val.th || key,
+                    ar: val.ar || '',
+                    icon: val.icon || '📖'
                 };
             }
         }
@@ -362,4 +378,70 @@ export async function deleteArticle(id: string): Promise<void> {
         method: 'DELETE'
     });
     if (!res.ok) throw new Error('Failed to delete article');
+}
+
+// ------------------------------------------
+// ADMIN API
+// ------------------------------------------
+
+export interface AdminBook extends BookItem {
+    th: string;
+    ar?: string;
+    description?: string;
+    icon?: string;
+    color?: string;
+}
+
+export async function getAdminBooks(): Promise<AdminBook[]> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/books`);
+    if (!res.ok) throw new Error('Failed to fetch admin books');
+    const json = await res.json();
+    return json.data;
+}
+
+export async function createAdminBook(data: any): Promise<AdminBook> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/books`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to create book');
+    const json = await res.json();
+    return json.data;
+}
+
+export async function updateAdminBook(book: string, data: any): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/books/${book}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to update book');
+}
+
+export async function deleteAdminBook(book: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/books/${book}`, {
+        method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete book');
+}
+
+export async function createAdminHadith(data: any): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/hadiths`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to create hadith');
+    }
+    return res.json();
+}
+
+export async function deleteAdminHadith(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/hadiths/${id}`, {
+        method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete hadith');
 }

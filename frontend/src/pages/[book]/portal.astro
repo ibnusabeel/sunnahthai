@@ -125,8 +125,8 @@ try {
       {kitabs.kitabs.length > 0 ? (
         <div class="space-y-2">
           {kitabs.kitabs.map((kitab, index) => {
-            const displayName = kitab.th || kitab.ar;
-            const filterValue = encodeURIComponent(kitab.th || kitab.ar);
+            const displayName = kitab.th || kitab.en || kitab.ar;
+            const filterValue = encodeURIComponent(kitab.th || kitab.en || kitab.ar);
             
             const targetUrl = (kitabs.kitabs.length === 1) ? `/${book}?view=all` : `/${book}?kitab=${filterValue}`;
             
@@ -145,11 +145,11 @@ try {
                   <div class="flex-1 min-w-0">
                     {/* Thai or English Name */}
                     <div class="font-medium text-text md:float-left group-hover:text-primary transition-colors">
-                      {kitab.th }
+                      {kitab.th || kitab.en || displayName}
                     </div>
                     
-                    {/* Arabic Name */}
-                    {kitab.ar && (
+                    {/* Arabic Name - Only show if different from display */}
+                    {kitab.ar && (kitab.th || kitab.en) && (
                       <div class="text-xl font-arabic md:float-right text-text-muted mt-1" dir="rtl">
                         {kitab.ar}
                       </div>

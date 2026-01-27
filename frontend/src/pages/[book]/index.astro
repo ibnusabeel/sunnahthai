@@ -313,35 +313,33 @@ function getGradeThai(status: string): string {
                     <div class="relative">
                       {/* Kitab */}
                       <div class="flex items-center gap-3 mb-2">
-                        <div class="w-8 h-8 flex-shrink-0 rounded-full bg-white/80 shadow-sm flex items-center justify-center">
-                          <span class="text-sm">📖</span>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                          {hadith.kitab.ar && (
-                            <span class="font-arabic text-lg text-primary" dir="rtl">
-                              {hadith.kitab.ar}
-                            </span>
-                          )}
+                        <div class="grid grid-cols-2 gap-2 flex-1 min-w-0">
                           {hadith.kitab.th && (
                             <span class="text-sm text-text-muted ml-2">
                               🌸 {hadith.kitab.th}
                             </span>
                           )}
+                          {hadith.kitab.ar && (
+                            <span class="font-arabic text-lg text-primary" dir="rtl">
+                             🌸 {hadith.kitab.ar}
+                            </span>
+                          )}
+                          
                         </div>
                       </div>
 
                       {/* Bab (h2_title) */}
                       {(hadith.bab?.ar || hadith.bab?.th) && (
-                        <div class="flex items-center gap-3 mt-2 pl-11">
-                          <div class="flex-1 min-w-0 text-sm">
-                            {hadith.bab.ar && (
-                              <span class="font-arabic text-base text-text-muted" dir="rtl">
-                                {hadith.bab.ar}
-                              </span>
-                            )}
+                        <div class="flex items-center gap-3 mt-2 ">
+                          <div class="grid grid-cols-2 gap-2 flex-1 min-w-0 text-sm">
                             {hadith.bab.th && (
                               <span class="text-text-light ml-2">
                                 📁 {hadith.bab.th}
+                              </span>
+                            )}
+                            {hadith.bab.ar && (
+                              <span class="font-arabic text-base text-text-muted" dir="rtl">
+                                📁 {hadith.bab.ar}
                               </span>
                             )}
                           </div>
@@ -389,16 +387,16 @@ function getGradeThai(status: string): string {
                         </div>
                         {/* Thai Chain - lighter */}
                         {hadith.chain?.th && (
-                          <div class="text-text-light/70 text-xs italic mb-2">
-                            {hadith.chain.th}
-                          </div>
+                          <span class="text-text-light/90 mb-2">
+                            {hadith.chain.th} 
+                          </span>
                         )}
                         {search ? (
                           <span
                             set:html={highlightText(hadith.content.th, search)}
                           />
                         ) : (
-                          hadith.content.th
+                           hadith.content.th
                         )}
                       </div>
                     ) : (
@@ -418,9 +416,9 @@ function getGradeThai(status: string): string {
                       </div>
                       {/* Arabic Chain - lighter */}
                       {hadith.chain?.ar && (
-                        <div class="font-arabic text-primary/90 text-xl leading-relaxed mb-2" dir="rtl">
+                        <span class="font-arabic text-primary/90 text-xl leading-relaxed mb-2" dir="rtl">
                           {hadith.chain.ar}
-                        </div>
+                        </span>
                       )}
                       {search ? (
                         <span
@@ -440,7 +438,7 @@ function getGradeThai(status: string): string {
                     {/* Grade badge */}
                     {(hadith.grade?.ar || hadith.hadith_status) && (
                       <span
-                        class={`px-3 py-1.5 rounded-xl text-sm font-semibold border ${getGradeColor(hadith.hadith_status || '')}`}
+                        class={`px-3 py-1.5 rounded-xl text-xsfont-semibold font-arabic border ${getGradeColor(hadith.hadith_status || '')}`}
                       >
                         ✅ {hadith.grade?.ar || getGradeThai(hadith.hadith_status || '')}
                       </span>

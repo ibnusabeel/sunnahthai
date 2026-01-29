@@ -1,0 +1,27 @@
+# Robots.txt for sunnahthai.com
+# https://www.robotstxt.org/
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://sunnahthai.com/sitemap-index.xml
+
+# Block admin pages from indexing
+Disallow: /admin/
+Disallow: /admin
+
+# Block API routes if exposed
+Disallow: /api/
+
+# Allow search engines to index all hadith content
+Allow: /bukhari/
+Allow: /muslim/
+Allow: /nasai/
+Allow: /tirmidhi/
+Allow: /abudawud/
+Allow: /ibnmajah/
+Allow: /search
+
+# Crawl delay (optional, helps reduce server load)
+Crawl-delay: 1

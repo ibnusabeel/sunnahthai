@@ -1,13 +1,9 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import {
-	getStats,
-	getBooks,
-	getDynamicBookNames,
-	BOOK_NAMES,
-	type StatsResponse,
-	type BookItem,
-} from "../lib/api";
+import { BOOK_NAMES } from "../lib/api";
+
+// SSG: No server-side API calls - page is pre-rendered as static HTML
+// Stats will be fetched client-side after page load for instant initial render
 
 // Main books
 const MAIN_BOOKS = [
@@ -18,14 +14,6 @@ const MAIN_BOOKS = [
 	"abudawud",
 	"ibnmajah",
 ];
-
-// Fetch stats for all books
-let allStats: StatsResponse = {
-	book: null,
-	overall: { total: 0, translated: 0, pending: 0, percentage: 0 },
-};
-let bookStats: Record<string, StatsResponse | null> = {};
-let otherBooks: BookItem[] = [];
 
 // Coming Soon Books
 const COMING_SOON_BOOKS = [
@@ -59,87 +47,18 @@ const COMING_SOON_BOOKS = [
 const bookColors: Record<string, string> = {
 	bukhari: "from-mint-soft to-mint-light border-mint",
 	muslim: "from-sky-soft to-sky-light border-sky",
-	lulu: "from-amber-100 to-amber-50 border-amber-300", // Gold/Amber theme for "Pearl & Coral"
+	lulu: "from-amber-100 to-amber-50 border-amber-300",
 	nasai: "from-peach-soft to-peach-light border-peach",
 	tirmidhi: "from-pink-soft to-pink-light border-pink",
 	abudawud: "from-primary-soft to-lavender-light border-primary-light",
 	ibnmajah: "from-lavender-light to-primary-soft border-lavender",
 };
 
-// Defaults
-let bookNames = { ...BOOK_NAMES };
+// Static book names for SSG
+const bookNames = { ...BOOK_NAMES };
 
-try {
-	// Fetch all data in PARALLEL for faster page load
-	const bookKeys = Object.keys(BOOK_NAMES);
-
-	const [dynamicNames, fetchedAllStats, booksData, ...bookStatsResults] =
-		await Promise.all([
-			getDynamicBookNames(),
-			getStats(),
-			getBooks(),
-			// Fetch stats for all books in parallel
-			...bookKeys.map((book) => getStats(book).catch(() => null)),
-		]);
-
-	bookNames = { ...bookNames, ...dynamicNames };
-	allStats = fetchedAllStats;
-	console.log(
-		"[SSR] Successfully fetched allStats:",
-		JSON.stringify(allStats),
-	);
-
-	// Map book stats results to bookStats object
-	bookKeys.forEach((book, index) => {
-		const stats = bookStatsResults[index];
-		if (stats) {
-			// Override for Ahmad (Frontend Verification)
-			if (book === "ahmad") {
-				const total = 26363;
-				const translated = stats.overall.translated;
-				stats.overall.total = total;
-				stats.overall.pending = total - translated;
-				stats.overall.percentage =
-					total > 0 ? Math.round((translated / total) * 100) : 0;
-			}
-			bookStats[book] = stats;
-		} else {
-			bookStats[book] = null;
-		}
-	});
-	console.log("[SSR] Successfully fetched books:", booksData.books.length);
-
-	// Override Ahmad in books list
-	const ahmadBook = booksData.books.find((b) => b.book === "ahmad");
-	if (ahmadBook) {
-		ahmadBook.total = 26363;
-		ahmadBook.pending = ahmadBook.total - ahmadBook.translated;
-		ahmadBook.percentage =
-			ahmadBook.total > 0
-				? Math.round((ahmadBook.translated / ahmadBook.total) * 100)
-				: 0;
-	}
-
-	const PREFERRED_ORDER = ["lulu", "adab", "malik", "darimi", "ahmad"];
-
-	otherBooks = booksData.books
-		.filter((b) => !MAIN_BOOKS.includes(b.book))
-		.sort((a, b) => {
-			const idxA = PREFERRED_ORDER.indexOf(a.book);
-			const idxB = PREFERRED_ORDER.indexOf(b.book);
-
-			// If both in list, sort by index
-			if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-			// If A is in list, comes first
-			if (idxA !== -1) return -1;
-			// If B is in list, comes first
-			if (idxB !== -1) return 1;
-			// Otherwise maintain original or alphabetical?
-			return 0;
-		});
-} catch (error) {
-	console.error("Failed to fetch stats:", error);
-}
+// API URL for client-side
+const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:3000";
 ---
 
 <BaseLayout title="ซุนนะห์ไทย | หน้าแรก">
@@ -186,37 +105,47 @@ try {
 		</div>
 	</section>
 
-	<!-- Stats Section -->
+	<!-- Stats Section - Client Hydrated -->
 	<section class="container mx-auto px-4 -mt-4 relative z-10">
 		<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
 			<div
 				class="stat-card bg-gradient-to-br from-mint-soft to-white border-2 border-mint-light"
 			>
-				<div class="stat-value">
-					{allStats.overall.total.toLocaleString()}
+				<div class="stat-value" id="stat-total">
+					<span
+						class="animate-pulse bg-gray-200 rounded w-16 h-6 inline-block"
+					></span>
 				</div>
 				<div class="stat-label">📚 หะดีษทั้งหมด</div>
 			</div>
 			<div
 				class="stat-card bg-gradient-to-br from-primary-soft to-white border-2 border-primary-light"
 			>
-				<div class="stat-value">
-					{allStats.overall.translated.toLocaleString()}
+				<div class="stat-value" id="stat-translated">
+					<span
+						class="animate-pulse bg-gray-200 rounded w-16 h-6 inline-block"
+					></span>
 				</div>
 				<div class="stat-label">✨ แปลแล้ว</div>
 			</div>
 			<div
 				class="stat-card bg-gradient-to-br from-peach-soft to-white border-2 border-peach-light"
 			>
-				<div class="stat-value">
-					{allStats.overall.pending.toLocaleString()}
+				<div class="stat-value" id="stat-pending">
+					<span
+						class="animate-pulse bg-gray-200 rounded w-16 h-6 inline-block"
+					></span>
 				</div>
 				<div class="stat-label">⏳ รอแปล</div>
 			</div>
 			<div
 				class="stat-card bg-gradient-to-br from-pink-soft to-white border-2 border-pink-light"
 			>
-				<div class="stat-value">{allStats.overall.percentage}%</div>
+				<div class="stat-value" id="stat-percentage">
+					<span
+						class="animate-pulse bg-gray-200 rounded w-12 h-6 inline-block"
+					></span>
+				</div>
 				<div class="stat-label">🎯 ความคืบหน้า</div>
 			</div>
 		</div>
@@ -236,7 +165,6 @@ try {
 				MAIN_BOOKS.map((key) => {
 					const book = bookNames[key] || BOOK_NAMES[key];
 					if (!book) return null;
-					const stats = bookStats[key];
 					const colorClass =
 						bookColors[key] ||
 						"from-gray-100 to-white border-gray-200";
@@ -244,6 +172,7 @@ try {
 						<a
 							href={`/${key}`}
 							class={`group relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br ${colorClass} p-6 hover:shadow-glow hover:-translate-y-2 transition-all duration-300`}
+							data-book={key}
 						>
 							{/* Decorative blob */}
 							<div class="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-white/30 blur-xl group-hover:scale-150 transition-transform duration-500" />
@@ -264,46 +193,43 @@ try {
 									{book.ar}
 								</p>
 
-								{/* Hadith Count - NEW */}
-								{stats ? (
-									<div class="space-y-3">
-										<div class="flex justify-center gap-3">
-											<div class="px-3 py-1.5 rounded-lg bg-white/60 backdrop-blur border border-white/50">
-												<span class="text-lg font-bold text-text">
-													{stats.overall.total.toLocaleString()}
-												</span>
-												<span class="text-xs text-text-muted ml-1">
-													หะดีษ
-												</span>
-											</div>
-											<div class="px-3 py-1.5 rounded-lg bg-mint/30 backdrop-blur border border-mint/50">
-												<span class="text-lg font-bold text-emerald-700">
-													{stats.overall.translated.toLocaleString()}
-												</span>
-												<span class="text-xs text-emerald-600 ml-1">
-													แปลแล้ว
-												</span>
-											</div>
+								{/* Hadith Count - Client Hydrated */}
+								<div
+									class="space-y-3 book-stats"
+									data-book={key}
+								>
+									<div class="flex justify-center gap-3">
+										<div class="px-3 py-1.5 rounded-lg bg-white/60 backdrop-blur border border-white/50">
+											<span class="text-lg font-bold text-text book-total">
+												<span class="animate-pulse bg-gray-200 rounded w-10 h-4 inline-block" />
+											</span>
+											<span class="text-xs text-text-muted ml-1">
+												หะดีษ
+											</span>
 										</div>
-
-										{/* Progress Bar */}
-										<div class="flex items-center gap-2">
-											<div class="flex-1 h-3 bg-white/60 rounded-full overflow-hidden shadow-inner">
-												<div
-													class="h-full bg-gradient-to-r from-primary to-pink rounded-full transition-all"
-													style={`width: ${stats.overall.percentage}%`}
-												/>
-											</div>
-											<span class="text-sm font-bold text-primary">
-												{stats.overall.percentage}%
+										<div class="px-3 py-1.5 rounded-lg bg-mint/30 backdrop-blur border border-mint/50">
+											<span class="text-lg font-bold text-emerald-700 book-translated">
+												<span class="animate-pulse bg-gray-200 rounded w-8 h-4 inline-block" />
+											</span>
+											<span class="text-xs text-emerald-600 ml-1">
+												แปลแล้ว
 											</span>
 										</div>
 									</div>
-								) : (
-									<p class="text-sm text-text-light py-4">
-										🌸 เร็วๆ นี้
-									</p>
-								)}
+
+									{/* Progress Bar */}
+									<div class="flex items-center gap-2">
+										<div class="flex-1 h-3 bg-white/60 rounded-full overflow-hidden shadow-inner">
+											<div
+												class="h-full bg-gradient-to-r from-primary to-pink rounded-full transition-all book-progress"
+												style="width: 0%"
+											/>
+										</div>
+										<span class="text-sm font-bold text-primary book-percentage">
+											0%
+										</span>
+									</div>
+								</div>
 							</div>
 						</a>
 					);
@@ -312,95 +238,27 @@ try {
 		</div>
 	</section>
 
-	<!-- Other Books Section -->
-	{
-		otherBooks.length > 0 && (
-			<section class="container mx-auto px-4 pb-16">
-				<div class="text-center mb-8">
-					<h2 class="text-xl md:text-2xl font-bold text-text mb-2">
-						📚 หนังสืออื่นๆ
-					</h2>
-					<p class="text-text-muted text-sm">
-						หะดีษจากหนังสือคอลเลคชันเพิ่มเติม
-					</p>
-				</div>
+	<!-- Other Books Section - Client Hydrated -->
+	<section
+		id="other-books-section"
+		class="container mx-auto px-4 pb-16 hidden"
+	>
+		<div class="text-center mb-8">
+			<h2 class="text-xl md:text-2xl font-bold text-text mb-2">
+				📚 หนังสืออื่นๆ
+			</h2>
+			<p class="text-text-muted text-sm">
+				หะดีษจากหนังสือคอลเลคชันเพิ่มเติม
+			</p>
+		</div>
 
-				<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-					{otherBooks.map((book, i) => {
-						const colors = [
-							"from-amber-100 to-amber-50 border-amber-200",
-							"from-cyan-100 to-cyan-50 border-cyan-200",
-							"from-rose-100 to-rose-50 border-rose-200",
-							"from-violet-100 to-violet-50 border-violet-200",
-							"from-teal-100 to-teal-50 border-teal-200",
-							"from-fuchsia-100 to-fuchsia-50 border-fuchsia-200",
-						];
-						const icons = ["📜", "📕", "📗", "📘", "📙", "📓"];
-						const colorClass = colors[i % colors.length];
-						const icon = icons[i % icons.length];
-						const bookInfo = bookNames[book.book] ||
-							BOOK_NAMES[book.book] || {
-								th: book.book,
-								ar: "",
-								icon: "📖",
-							};
-
-						return (
-							<a
-								href={`/${book.book}`}
-								class={`group relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br ${colorClass} p-5 hover:shadow-glow hover:-translate-y-2 transition-all duration-300`}
-							>
-								{/* Decorative blob */}
-								<div class="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-white/40 blur-xl group-hover:scale-150 transition-transform duration-500" />
-
-								<div class="flex items-center gap-4 relative z-10">
-									<div class="w-14 h-14 rounded-xl bg-white/70 backdrop-blur flex items-center justify-center text-3xl group-hover:scale-110 transition-transform shadow-sm">
-										{bookInfo.icon || icon}
-									</div>
-									<div class="flex-1 min-w-0">
-										<h3 class="font-bold text-base text-text group-hover:text-primary-dark transition-colors">
-											{bookInfo.th}
-										</h3>
-										{bookInfo.ar && (
-											<p
-												class="font-arabic text-sm text-text-muted"
-												dir="rtl"
-											>
-												{bookInfo.ar}
-											</p>
-										)}
-										<div class="flex items-center gap-3 text-sm mt-1">
-											<span class="text-text-muted">
-												{book.total.toLocaleString()}{" "}
-												หะดีษ
-											</span>
-											<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
-												{book.translated.toLocaleString()}{" "}
-												แปลแล้ว
-											</span>
-										</div>
-									</div>
-								</div>
-
-								{/* Progress bar */}
-								<div class="mt-4 flex items-center gap-2">
-									<div class="flex-1 h-2 bg-white/60 rounded-full overflow-hidden shadow-inner">
-										<div
-											class="h-full bg-gradient-to-r from-primary to-pink rounded-full transition-all"
-											style={`width: ${book.percentage}%`}
-										/>
-									</div>
-									<span class="text-xs font-bold text-primary">
-										{book.percentage}%
-									</span>
-								</div>
-							</a>
-						);
-					})}
-				</div>
-			</section>
-		)
-	}
+		<div
+			id="other-books-container"
+			class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto"
+		>
+			<!-- Populated by JavaScript -->
+		</div>
+	</section>
 
 	<!-- Coming Soon Section -->
 	<section class="container mx-auto px-4 pb-16">
@@ -471,7 +329,7 @@ try {
 					class="text-center card bg-gradient-to-br from-pink-soft to-white border-2 border-pink-light"
 				>
 					<div
-						class="w-14 h-14 rounded-full bg-pink flex itemshttps://trello.com/c/xlKr8vLA/1508-%E0%B8%81%E0%B8%A5%E0%B9%88%E0%B8%AD%E0%B8%87%E0%B9%83%E0%B8%AA%E0%B8%9E%E0%B8%A3%E0%B9%89%E0%B8%AD%E0%B8%A1%E0%B8%9D%E0%B8%B2-center justify-center mx-auto mb-4"
+						class="w-14 h-14 rounded-full bg-pink flex items-center justify-center mx-auto mb-4"
 					>
 						<span class="text-2xl">📱</span>
 					</div>
@@ -497,3 +355,193 @@ try {
 		</div>
 	</section>
 </BaseLayout>
+
+<script define:vars={{ API_URL, MAIN_BOOKS, bookNames: BOOK_NAMES }}>
+	// Client-side hydration: Fetch stats after page loads
+	const API_BASE = API_URL;
+	const AHMAD_TOTAL = 26363;
+
+	// Fetch overall stats
+	async function fetchOverallStats() {
+		try {
+			const res = await fetch(`${API_BASE}/api/stats`);
+			if (!res.ok) throw new Error("Failed to fetch stats");
+			const data = await res.json();
+
+			document.getElementById("stat-total").textContent =
+				data.overall.total.toLocaleString();
+			document.getElementById("stat-translated").textContent =
+				data.overall.translated.toLocaleString();
+			document.getElementById("stat-pending").textContent =
+				data.overall.pending.toLocaleString();
+			document.getElementById("stat-percentage").textContent =
+				data.overall.percentage + "%";
+		} catch (e) {
+			console.error("Failed to fetch overall stats:", e);
+		}
+	}
+
+	// Fetch individual book stats
+	async function fetchBookStats(bookKey) {
+		try {
+			const res = await fetch(`${API_BASE}/api/stats/${bookKey}`);
+			if (!res.ok) throw new Error("Failed to fetch book stats");
+			let data = await res.json();
+
+			// Override for Ahmad
+			if (bookKey === "ahmad") {
+				const translated = data.overall.translated;
+				data.overall.total = AHMAD_TOTAL;
+				data.overall.pending = AHMAD_TOTAL - translated;
+				data.overall.percentage = Math.round(
+					(translated / AHMAD_TOTAL) * 100,
+				);
+			}
+
+			return data;
+		} catch {
+			return null;
+		}
+	}
+
+	// Update book card stats
+	async function updateBookCards() {
+		const allBookKeys = [...MAIN_BOOKS];
+
+		// Fetch all book stats in parallel
+		const results = await Promise.all(allBookKeys.map(fetchBookStats));
+
+		results.forEach((stats, index) => {
+			const bookKey = allBookKeys[index];
+			if (!stats) return;
+
+			const card = document.querySelector(
+				`[data-book="${bookKey}"] .book-stats`,
+			);
+			if (!card) return;
+
+			const totalEl = card.querySelector(".book-total");
+			const translatedEl = card.querySelector(".book-translated");
+			const progressEl = card.querySelector(".book-progress");
+			const percentageEl = card.querySelector(".book-percentage");
+
+			if (totalEl)
+				totalEl.textContent = stats.overall.total.toLocaleString();
+			if (translatedEl)
+				translatedEl.textContent =
+					stats.overall.translated.toLocaleString();
+			if (progressEl)
+				progressEl.style.width = stats.overall.percentage + "%";
+			if (percentageEl)
+				percentageEl.textContent = stats.overall.percentage + "%";
+		});
+	}
+
+	// Fetch other books
+	async function fetchOtherBooks() {
+		try {
+			const res = await fetch(`${API_BASE}/api/books`);
+			if (!res.ok) throw new Error("Failed to fetch books");
+			const data = await res.json();
+
+			// Filter out main books
+			const otherBooks = data.books.filter(
+				(b) => !MAIN_BOOKS.includes(b.book),
+			);
+
+			if (otherBooks.length === 0) return;
+
+			// Override Ahmad
+			const ahmadBook = otherBooks.find((b) => b.book === "ahmad");
+			if (ahmadBook) {
+				ahmadBook.total = AHMAD_TOTAL;
+				ahmadBook.pending = AHMAD_TOTAL - ahmadBook.translated;
+				ahmadBook.percentage = Math.round(
+					(ahmadBook.translated / AHMAD_TOTAL) * 100,
+				);
+			}
+
+			// Sort other books
+			const PREFERRED_ORDER = [
+				"lulu",
+				"adab",
+				"malik",
+				"darimi",
+				"ahmad",
+			];
+			otherBooks.sort((a, b) => {
+				const idxA = PREFERRED_ORDER.indexOf(a.book);
+				const idxB = PREFERRED_ORDER.indexOf(b.book);
+				if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+				if (idxA !== -1) return -1;
+				if (idxB !== -1) return 1;
+				return 0;
+			});
+
+			// Render other books
+			const container = document.getElementById("other-books-container");
+			const section = document.getElementById("other-books-section");
+
+			if (!container || !section) return;
+
+			const colors = [
+				"from-amber-100 to-amber-50 border-amber-200",
+				"from-cyan-100 to-cyan-50 border-cyan-200",
+				"from-rose-100 to-rose-50 border-rose-200",
+				"from-violet-100 to-violet-50 border-violet-200",
+				"from-teal-100 to-teal-50 border-teal-200",
+				"from-fuchsia-100 to-fuchsia-50 border-fuchsia-200",
+			];
+			const icons = ["📜", "📕", "📗", "📘", "📙", "📓"];
+
+			container.innerHTML = otherBooks
+				.map((book, i) => {
+					const colorClass = colors[i % colors.length];
+					const icon = icons[i % icons.length];
+					const bookInfo = bookNames[book.book] || {
+						th: book.book,
+						ar: "",
+						icon: "📖",
+					};
+
+					return `
+					<a href="/${book.book}" class="group relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br ${colorClass} p-5 hover:shadow-glow hover:-translate-y-2 transition-all duration-300">
+						<div class="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-white/40 blur-xl group-hover:scale-150 transition-transform duration-500"></div>
+						<div class="flex items-center gap-4 relative z-10">
+							<div class="w-14 h-14 rounded-xl bg-white/70 backdrop-blur flex items-center justify-center text-3xl group-hover:scale-110 transition-transform shadow-sm">
+								${bookInfo.icon || icon}
+							</div>
+							<div class="flex-1 min-w-0">
+								<h3 class="font-bold text-base text-text group-hover:text-primary-dark transition-colors">${bookInfo.th}</h3>
+								${bookInfo.ar ? `<p class="font-arabic text-sm text-text-muted" dir="rtl">${bookInfo.ar}</p>` : ""}
+								<div class="flex items-center gap-3 text-sm mt-1">
+									<span class="text-text-muted">${book.total.toLocaleString()} หะดีษ</span>
+									<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">${book.translated.toLocaleString()} แปลแล้ว</span>
+								</div>
+							</div>
+						</div>
+						<div class="mt-4 flex items-center gap-2">
+							<div class="flex-1 h-2 bg-white/60 rounded-full overflow-hidden shadow-inner">
+								<div class="h-full bg-gradient-to-r from-primary to-pink rounded-full transition-all" style="width: ${book.percentage}%"></div>
+							</div>
+							<span class="text-xs font-bold text-primary">${book.percentage}%</span>
+						</div>
+					</a>
+				`;
+				})
+				.join("");
+
+			// Show the section
+			section.classList.remove("hidden");
+		} catch (e) {
+			console.error("Failed to fetch other books:", e);
+		}
+	}
+
+	// Run all fetches in parallel when page loads
+	document.addEventListener("DOMContentLoaded", () => {
+		fetchOverallStats();
+		updateBookCards();
+		fetchOtherBooks();
+	});
+</script>

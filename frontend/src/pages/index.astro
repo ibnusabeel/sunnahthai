@@ -70,34 +70,43 @@ const bookColors: Record<string, string> = {
 let bookNames = { ...BOOK_NAMES };
 
 try {
-	const dynamicNames = await getDynamicBookNames();
+	// Fetch all data in PARALLEL for faster page load
+	const bookKeys = Object.keys(BOOK_NAMES);
+
+	const [dynamicNames, fetchedAllStats, booksData, ...bookStatsResults] =
+		await Promise.all([
+			getDynamicBookNames(),
+			getStats(),
+			getBooks(),
+			// Fetch stats for all books in parallel
+			...bookKeys.map((book) => getStats(book).catch(() => null)),
+		]);
+
 	bookNames = { ...bookNames, ...dynamicNames };
-	allStats = await getStats();
+	allStats = fetchedAllStats;
 	console.log(
 		"[SSR] Successfully fetched allStats:",
 		JSON.stringify(allStats),
 	);
 
-	// Try to get stats for main books
-	for (const book of Object.keys(BOOK_NAMES)) {
-		try {
-			bookStats[book] = await getStats(book);
+	// Map book stats results to bookStats object
+	bookKeys.forEach((book, index) => {
+		const stats = bookStatsResults[index];
+		if (stats) {
 			// Override for Ahmad (Frontend Verification)
-			if (book === "ahmad" && bookStats[book]) {
+			if (book === "ahmad") {
 				const total = 26363;
-				const translated = bookStats[book]!.overall.translated;
-				bookStats[book]!.overall.total = total;
-				bookStats[book]!.overall.pending = total - translated;
-				bookStats[book]!.overall.percentage =
+				const translated = stats.overall.translated;
+				stats.overall.total = total;
+				stats.overall.pending = total - translated;
+				stats.overall.percentage =
 					total > 0 ? Math.round((translated / total) * 100) : 0;
 			}
-		} catch {
+			bookStats[book] = stats;
+		} else {
 			bookStats[book] = null;
 		}
-	}
-
-	// Fetch all books from backend to find "other" books
-	const booksData = await getBooks();
+	});
 	console.log("[SSR] Successfully fetched books:", booksData.books.length);
 
 	// Override Ahmad in books list

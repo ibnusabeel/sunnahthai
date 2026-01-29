@@ -12,6 +12,18 @@
     font-weight: normal;
     font-style: normal;
     font-display: swap;
+    /* Restrict to Arabic characters only */
+    unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+
+body {
+    /* Override RTE font to include Arabic font first */
+    --rte-font-family: 'UthmanTN', 'IBM Plex Sans Thai Looped', 'Inter', system-ui, sans-serif;
+}
+
+/* Ensure rte-content uses this font family even outside of rte-wrapper */
+.rte-content {
+    font-family: var(--rte-font-family) !important;
 }
 
 @tailwind base;

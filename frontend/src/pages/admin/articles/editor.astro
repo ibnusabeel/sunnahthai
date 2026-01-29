@@ -132,6 +132,11 @@ try {
             align-items: center;
             justify-content: center;
         }
+
+        /* RTE Custom Overrides */
+        :global(.rte-wrapper) {
+            max-width: 100% !important;
+        }
     </style>
 
     <!-- Header -->
@@ -162,9 +167,7 @@ try {
 
             <div class="editor-card">
                 <label class="form-label">เนื้อหา</label>
-                <textarea id="content" style="min-height: 400px;"
-                    >{article?.content || ""}</textarea
-                >
+                <div id="editor-container" style="min-height: 400px;"></div>
             </div>
         </div>
 
@@ -255,48 +258,64 @@ try {
         </div>
     </div>
 
-    <!-- TinyMCE CDN -->
-    <script
-        is:inline
-        src="https://cdn.tiny.cloud/1/4o3zqqgy417yz3i7q2pwiph5qcftrg07mx1csfkhncpdhsgl/tinymce/6/tinymce.min.js"
-        referrerpolicy="origin"></script>
+    <!-- Editor Configuration -->
+    <div
+        id="editor-config"
+        data-id={id || ""}
+        data-is-edit={isEdit.toString()}
+        data-api-url={API_BASE_URL}
+        class="hidden"
+    >
+    </div>
 
-    <!-- Page Script -->
-    <script is:inline define:vars={{ id, isEdit, API_BASE_URL }}>
-        // Initialize TinyMCE
-        function initTinyMCE() {
-            if (typeof tinymce === "undefined") {
-                console.log("Waiting for TinyMCE...");
-                setTimeout(initTinyMCE, 200);
-                return;
+    <!-- Raw Content for Initialization -->
+    <textarea id="raw-content" class="hidden">{article?.content || ""}</textarea
+    >
+
+    <!-- Script -->
+    <script>
+        // @ts-ignore
+        import RichTextEditor from "@lakshaykumar/rich-text-editor";
+        import "@lakshaykumar/rich-text-editor/src/styles/rte.css";
+
+        // Initialize Editor
+        let editor: any;
+
+        function initEditor() {
+            const container = document.getElementById("editor-container");
+            const rawContent = document.getElementById(
+                "raw-content",
+            ) as HTMLTextAreaElement;
+
+            if (container) {
+                editor = new RichTextEditor("#editor-container", {
+                    placeholder: "เขียนเนื้อหาบทความที่นี่...",
+                });
+
+                // Load content
+                if (rawContent && rawContent.value) {
+                    editor.setHTML(rawContent.value);
+                }
             }
-
-            tinymce.init({
-                selector: "#content",
-                height: 450,
-                menubar: false,
-                plugins: "lists link image table code fullscreen preview",
-                toolbar:
-                    "undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link image | code fullscreen",
-                content_style:
-                    "body { font-family: Sarabun, sans-serif; font-size: 16px; line-height: 1.8; }",
-                placeholder: "เขียนเนื้อหาบทความที่นี่...",
-                branding: false,
-                promotion: false,
-                setup: function (editor) {
-                    editor.on("init", function () {
-                        console.log("TinyMCE initialized successfully");
-                    });
-                },
-            });
         }
 
         document.addEventListener("DOMContentLoaded", function () {
-            initTinyMCE();
+            initEditor();
+
+            const configEl = document.getElementById("editor-config");
+            if (!configEl) return;
+
+            const { id, isEdit: isEditStr, apiUrl } = configEl.dataset;
+            const isEdit = isEditStr === "true";
+            const API_BASE_URL = apiUrl;
 
             // Auto-generate slug from title
-            const titleInput = document.getElementById("title");
-            const slugInput = document.getElementById("slug");
+            const titleInput = document.getElementById(
+                "title",
+            ) as HTMLInputElement;
+            const slugInput = document.getElementById(
+                "slug",
+            ) as HTMLInputElement;
             let slugEdited = !!slugInput.value;
 
             titleInput.addEventListener("input", function () {
@@ -315,16 +334,23 @@ try {
 
             // Cover image upload
             const dropzone = document.getElementById("cover-dropzone");
-            const coverInput = document.getElementById("cover-input");
+            const coverInput = document.getElementById(
+                "cover-input",
+            ) as HTMLInputElement;
             const coverPreview = document.getElementById("cover-preview");
-            const coverImg = document.getElementById("cover-img");
+            const coverImg = document.getElementById(
+                "cover-img",
+            ) as HTMLImageElement;
             const coverRemove = document.getElementById("cover-remove");
-            const coverValue = document.getElementById("cover_image");
+            const coverValue = document.getElementById(
+                "cover_image",
+            ) as HTMLInputElement;
 
-            dropzone.addEventListener("click", () => coverInput.click());
+            dropzone?.addEventListener("click", () => coverInput.click());
 
-            coverInput.addEventListener("change", async function (e) {
-                const file = e.target.files[0];
+            coverInput?.addEventListener("change", async function (e) {
+                const target = e.target as HTMLInputElement;
+                const file = target.files ? target.files[0] : null;
                 if (!file) return;
 
                 const formData = new FormData();
@@ -339,90 +365,96 @@ try {
                     const data = await res.json();
                     const url = API_BASE_URL + data.url;
 
-                    coverImg.src = url;
-                    coverValue.value = url;
-                    dropzone.classList.add("hidden");
-                    coverPreview.classList.remove("hidden");
-                } catch (err) {
+                    if (coverImg) coverImg.src = url;
+                    if (coverValue) coverValue.value = url;
+                    dropzone?.classList.add("hidden");
+                    coverPreview?.classList.remove("hidden");
+                } catch (err: any) {
                     alert("อัปโหลดรูปไม่สำเร็จ: " + err.message);
                 }
             });
 
-            coverRemove.addEventListener("click", function () {
-                coverImg.src = "";
-                coverValue.value = "";
-                coverPreview.classList.add("hidden");
-                dropzone.classList.remove("hidden");
-                coverInput.value = "";
+            coverRemove?.addEventListener("click", function () {
+                if (coverImg) coverImg.src = "";
+                if (coverValue) coverValue.value = "";
+                coverPreview?.classList.add("hidden");
+                dropzone?.classList.remove("hidden");
+                if (coverInput) coverInput.value = "";
             });
 
             // Show preview if cover exists
-            if (coverValue.value) {
-                dropzone.classList.add("hidden");
-                coverPreview.classList.remove("hidden");
+            if (coverValue && coverValue.value) {
+                dropzone?.classList.add("hidden");
+                coverPreview?.classList.remove("hidden");
             }
 
             // Save article
-            document
-                .getElementById("save-btn")
-                .addEventListener("click", async function () {
-                    const title = document.getElementById("title").value.trim();
-                    const slug = document.getElementById("slug").value.trim();
-                    const category = document.getElementById("category").value;
-                    const status = document.getElementById("status").value;
-                    const cover_image =
-                        document.getElementById("cover_image").value;
+            const saveBtn = document.getElementById("save-btn");
+            saveBtn?.addEventListener("click", async function () {
+                const title = (
+                    document.getElementById("title") as HTMLInputElement
+                ).value.trim();
+                const slug = (
+                    document.getElementById("slug") as HTMLInputElement
+                ).value.trim();
+                const category = (
+                    document.getElementById("category") as HTMLSelectElement
+                ).value;
+                const status = (
+                    document.getElementById("status") as HTMLSelectElement
+                ).value;
+                const cover_image = (
+                    document.getElementById("cover_image") as HTMLInputElement
+                ).value;
 
-                    // Get content from TinyMCE
-                    const content = tinymce.get("content")
-                        ? tinymce.get("content").getContent()
-                        : "";
+                // Get content from Editor
+                const content = editor ? editor.getHTML() : "";
 
-                    if (!title) {
-                        alert("กรุณาระบุหัวข้อบทความ");
-                        return;
+                if (!title) {
+                    alert("กรุณาระบุหัวข้อบทความ");
+                    return;
+                }
+                if (!slug) {
+                    alert("กรุณาระบุ Slug");
+                    return;
+                }
+
+                const payload = {
+                    title,
+                    slug,
+                    category,
+                    status,
+                    cover_image,
+                    content,
+                };
+                console.log("Saving:", payload);
+
+                try {
+                    const url = isEdit
+                        ? API_BASE_URL + "/api/articles/" + id
+                        : API_BASE_URL + "/api/articles";
+
+                    const res = await fetch(url, {
+                        method: isEdit ? "PUT" : "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload),
+                    });
+
+                    if (!res.ok) {
+                        const err = await res.json();
+                        throw new Error(err.error || "Failed to save");
                     }
-                    if (!slug) {
-                        alert("กรุณาระบุ Slug");
-                        return;
-                    }
 
-                    const payload = {
-                        title,
-                        slug,
-                        category,
-                        status,
-                        cover_image,
-                        content,
-                    };
-                    console.log("Saving:", payload);
-
-                    try {
-                        const url = isEdit
-                            ? API_BASE_URL + "/api/articles/" + id
-                            : API_BASE_URL + "/api/articles";
-
-                        const res = await fetch(url, {
-                            method: isEdit ? "PUT" : "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(payload),
-                        });
-
-                        if (!res.ok) {
-                            const err = await res.json();
-                            throw new Error(err.error || "Failed to save");
-                        }
-
-                        alert(
-                            isEdit
-                                ? "อัปเดตบทความเรียบร้อย"
-                                : "สร้างบทความเรียบร้อย",
-                        );
-                        window.location.href = "/admin/articles";
-                    } catch (err) {
-                        alert("บันทึกไม่สำเร็จ: " + err.message);
-                    }
-                });
+                    alert(
+                        isEdit
+                            ? "อัปเดตบทความเรียบร้อย"
+                            : "สร้างบทความเรียบร้อย",
+                    );
+                    window.location.href = "/admin/articles";
+                } catch (err: any) {
+                    alert("บันทึกไม่สำเร็จ: " + err.message);
+                }
+            });
         });
     </script>
 </AdminLayout>

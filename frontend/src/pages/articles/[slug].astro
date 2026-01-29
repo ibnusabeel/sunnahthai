@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getArticle, getCategories, type ArticleItem } from "../../lib/api";
+import "@lakshaykumar/rich-text-editor/src/styles/rte.css";
 
 const { slug } = Astro.params;
 let article: ArticleItem | null = null;
@@ -104,9 +105,7 @@ const cleanDesc =
             <div
                 class="max-w-4xl mx-auto bg-white rounded-3xl p-6 md:p-12 shadow-xl border border-gray-100"
             >
-                <div
-                    class="prose prose-lg md:prose-xl max-w-none text-gray-800 prose-headings:font-bold prose-headings:text-gray-900 prose-a:text-primary prose-img:rounded-2xl"
-                >
+                <div class="rte-content">
                     <Fragment set:html={article.content} />
                 </div>
 

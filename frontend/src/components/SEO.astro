@@ -1,0 +1,106 @@
+---
+/**
+ * SEO Component for SunnahThai
+ * Handles: Canonical URL, Open Graph, Twitter Cards
+ */
+export interface Props {
+    title: string;
+    description: string;
+    image?: string;
+    articleDate?: string;
+    type?: "website" | "article";
+    // Hadith specific
+    hadithNo?: string;
+    bookName?: string;
+    arabicText?: string;
+}
+
+const SITE_URL = "https://sunnahthai.com";
+const DEFAULT_IMAGE = `${SITE_URL}/og-default.png`;
+const SITE_NAME = "ซุนนะห์ไทย | SunnahThai";
+
+const {
+    title,
+    description,
+    image,
+    articleDate,
+    type = "website",
+    hadithNo,
+    bookName,
+    arabicText,
+} = Astro.props;
+
+// Build canonical URL from current page
+const canonicalURL = new URL(Astro.url.pathname, SITE_URL).href;
+
+// Ensure image is absolute URL
+const ogImage = image
+    ? image.startsWith("http")
+        ? image
+        : `${SITE_URL}${image}`
+    : DEFAULT_IMAGE;
+
+// Build optimized title
+const fullTitle = title.includes("ซุนนะห์ไทย")
+    ? title
+    : `${title} | ซุนนะห์ไทย`;
+
+// Build optimized description (max 160 chars for SEO)
+const metaDescription =
+    description.length > 160
+        ? description.substring(0, 157) + "..."
+        : description;
+---
+
+<!-- Primary Meta Tags -->
+<title>{fullTitle}</title>
+<meta name="title" content={fullTitle} />
+<meta name="description" content={metaDescription} />
+
+<!-- Canonical URL - Self-referencing -->
+<link rel="canonical" href={canonicalURL} />
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content={type} />
+<meta property="og:url" content={canonicalURL} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={metaDescription} />
+<meta property="og:image" content={ogImage} />
+<meta property="og:site_name" content={SITE_NAME} />
+<meta property="og:locale" content="th_TH" />
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:url" content={canonicalURL} />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={metaDescription} />
+<meta name="twitter:image" content={ogImage} />
+
+<!-- Article specific meta (for hadith pages) -->
+{
+    type === "article" && articleDate && (
+        <>
+            <meta property="article:published_time" content={articleDate} />
+            <meta property="article:author" content="SunnahThai" />
+            <meta property="article:section" content="Hadith" />
+        </>
+    )
+}
+
+<!-- Hadith specific meta for rich snippets -->
+{
+    hadithNo && bookName && (
+        <>
+            <meta name="hadith:number" content={hadithNo} />
+            <meta name="hadith:book" content={bookName} />
+        </>
+    )
+}
+
+<!-- Additional SEO tags -->
+<meta name="robots" content="index, follow" />
+<meta name="googlebot" content="index, follow" />
+
+<!-- Language alternates (for multi-language support) -->
+<link rel="alternate" hreflang="th" href={canonicalURL} />
+<link rel="alternate" hreflang="x-default" href={canonicalURL} />

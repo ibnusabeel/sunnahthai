@@ -1,5 +1,7 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import Schema from "../../components/Schema.astro";
+import Breadcrumb from "../../components/Breadcrumb.astro";
 import {
   getHadiths,
   getKitabs,
@@ -74,6 +76,20 @@ try {
   console.error("Failed to fetch data:", error);
 }
 
+// SEO: Build description with first hadith content for better indexing
+const firstHadith = hadiths.data[0];
+const seoDescription = firstHadith?.content?.th 
+  ? `${bookInfo.th} - ${firstHadith.content.th.substring(0, 120)}...`
+  : `อ่านหะดีษจาก${bookInfo.th} (${bookInfo.ar}) พร้อมคำแปลภาษาไทย รวม ${stats.overall.total.toLocaleString()} หะดีษ`;
+
+// SEO: Breadcrumbs for structured data
+const breadcrumbItems = [
+  { label: 'หน้าแรก', href: '/', icon: '🏠' },
+  { label: bookInfo.th, href: `/${book}`, icon: bookInfo.icon },
+  ...(kitabFilter ? [{ label: kitabFilter, href: `/${book}?kitab=${kitabFilter}`, icon: '📁' }] : []),
+  ...(search ? [{ label: `ค้นหา: ${search}`, href: `/${book}?search=${search}`, icon: '🔍' }] : []),
+];
+
 // Highlight function for search results
 function highlightText(text: string, searchQuery: string): string {
   if (!text || !searchQuery.trim()) return text;
@@ -125,7 +141,26 @@ function getGradeThai(status: string): string {
 }
 ---
 
-<BaseLayout title={`${bookInfo.th} | ซุนนะห์ไทย`}>
+<BaseLayout 
+  title={`${bookInfo.th} | ซุนนะห์ไทย`}
+  description={seoDescription}
+  type="article"
+>
+  <!-- Schema.org Structured Data for SEO -->
+  <Schema 
+    slot="head"
+    type="EncyclopediaArticle"
+    headline={`${bookInfo.th} - ${bookInfo.ar}`}
+    description={seoDescription}
+    bookName={bookInfo.th}
+    breadcrumbs={breadcrumbItems}
+  />
+
+  <!-- Breadcrumb Navigation -->
+  <div class="container mx-auto px-4 py-2">
+    <Breadcrumb items={breadcrumbItems} />
+  </div>
+
   <!-- Header with pastel gradient -->
   <section class={`bg-gradient-to-r ${colorClass} border-b-2`}>
     <div class="container mx-auto px-4 py-8">

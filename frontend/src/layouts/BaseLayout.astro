@@ -1,12 +1,20 @@
 ---
+import SEO from "../components/SEO.astro";
+
 export interface Props {
   title?: string;
   description?: string;
+  image?: string;
+  articleDate?: string;
+  type?: "website" | "article";
 }
 
 const {
   title = "ซุนนะห์ไทย | SunnahThai.com",
-  description = "แหล่งรวมหะดีษแปลภาษาไทย ซอเฮียะฮ์บุคอรี ซอเฮียะฮ์มุสลิม และอื่นๆ",
+  description = "แหล่งรวมหะดีษแปลภาษาไทย ซอเฮียะฮ์บุคอรี ซอเฮียะฮ์มุสลิม และอื่นๆ พร้อมตัวบทอาหรับและคำแปลภาษาไทย",
+  image,
+  articleDate,
+  type = "website",
 } = Astro.props;
 ---
 
@@ -14,9 +22,17 @@ const {
 <html lang="th">
   <head>
     <meta charset="UTF-8" />
-    <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0D9488" />
+
+    <!-- SEO Component - Handles canonical, OG, Twitter -->
+    <SEO
+      title={title}
+      description={description}
+      image={image}
+      articleDate={articleDate}
+      type={type}
+    />
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
@@ -24,8 +40,6 @@ const {
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-
-    <title>{title}</title>
   </head>
   <body class="min-h-screen flex flex-col">
     <!-- Header -->

@@ -1,0 +1,125 @@
+---
+/**
+ * Schema Component for SunnahThai
+ * Generates JSON-LD structured data for Google Rich Snippets
+ * Supports: Article, EncyclopediaArticle, BreadcrumbList, Hadith (custom)
+ */
+export interface BreadcrumbItem {
+    label: string;
+    href: string;
+}
+
+export interface Props {
+    type?: "Article" | "EncyclopediaArticle" | "Hadith";
+    headline: string;
+    description: string;
+    datePublished?: string;
+    dateModified?: string;
+    author?: string;
+    breadcrumbs?: BreadcrumbItem[];
+    // Hadith specific
+    hadithNo?: string;
+    bookName?: string;
+    arabicText?: string;
+    thaiTranslation?: string;
+    kitab?: string;
+}
+
+const SITE_URL = "https://sunnahthai.com";
+
+const {
+    type = "Article",
+    headline,
+    description,
+    datePublished = new Date().toISOString(),
+    dateModified,
+    author = "SunnahThai",
+    breadcrumbs = [],
+    hadithNo,
+    bookName,
+    arabicText,
+    thaiTranslation,
+    kitab,
+} = Astro.props;
+
+const canonicalURL = new URL(Astro.url.pathname, SITE_URL).href;
+
+// Build Article/EncyclopediaArticle Schema
+const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": type === "Hadith" ? "Article" : type,
+    headline: headline,
+    description: description,
+    url: canonicalURL,
+    datePublished: datePublished,
+    dateModified: dateModified || datePublished,
+    author: {
+        "@type": "Organization",
+        name: author,
+        url: SITE_URL,
+    },
+    publisher: {
+        "@type": "Organization",
+        name: "SunnahThai",
+        url: SITE_URL,
+        logo: {
+            "@type": "ImageObject",
+            url: `${SITE_URL}/icons/icon-512.png`,
+        },
+    },
+    mainEntityOfPage: {
+        "@type": "WebPage",
+        "@id": canonicalURL,
+    },
+    inLanguage: ["th", "ar"],
+    // Custom extension for Hadith content
+    ...(arabicText && {
+        articleBody: thaiTranslation || arabicText,
+        text: arabicText,
+    }),
+    ...(hadithNo &&
+        bookName && {
+            identifier: `${bookName}-${hadithNo}`,
+            isPartOf: {
+                "@type": "Book",
+                name: bookName,
+            },
+        }),
+    ...(kitab && {
+        about: {
+            "@type": "Thing",
+            name: kitab,
+        },
+    }),
+};
+
+// Build BreadcrumbList Schema
+const breadcrumbSchema =
+    breadcrumbs.length > 0
+        ? {
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              itemListElement: breadcrumbs.map((item, index) => ({
+                  "@type": "ListItem",
+                  position: index + 1,
+                  name: item.label,
+                  item: item.href.startsWith("http")
+                      ? item.href
+                      : `${SITE_URL}${item.href}`,
+              })),
+          }
+        : null;
+
+// Combine schemas
+const schemas: any[] = [articleSchema];
+if (breadcrumbSchema) schemas.push(breadcrumbSchema);
+---
+
+{
+    schemas.map((schema) => (
+        <script
+            type="application/ld+json"
+            set:html={JSON.stringify(schema, null, 0)}
+        />
+    ))
+}

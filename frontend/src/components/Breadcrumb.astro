@@ -1,0 +1,76 @@
+---
+/**
+ * Breadcrumb Component for SunnahThai
+ * Semantic breadcrumbs with Schema.org BreadcrumbList
+ */
+export interface BreadcrumbItem {
+  label: string;
+  href: string;
+  icon?: string;
+}
+
+export interface Props {
+  items: BreadcrumbItem[];
+  class?: string;
+}
+
+const SITE_URL = 'https://sunnahthai.com';
+const { items, class: className = '' } = Astro.props;
+
+// Build Schema.org BreadcrumbList
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": items.map((item, index) => ({
+    "@type": "ListItem",
+    "position": index + 1,
+    "name": item.label,
+    "item": item.href.startsWith('http') ? item.href : `${SITE_URL}${item.href}`
+  }))
+};
+---
+
+<nav aria-label="Breadcrumb" class={`breadcrumb-nav ${className}`}>
+  <ol class="flex flex-wrap items-center gap-1 text-sm text-text-muted">
+    {items.map((item, index) => (
+      <li class="flex items-center">
+        {index > 0 && (
+          <span class="mx-2 text-text-light">/</span>
+        )}
+        {index === items.length - 1 ? (
+          <!-- Current page (not a link) -->
+          <span class="font-medium text-text" aria-current="page">
+            {item.icon && <span class="mr-1">{item.icon}</span>}
+            {item.label}
+          </span>
+        ) : (
+          <!-- Link to parent pages -->
+          <a 
+            href={item.href} 
+            class="hover:text-primary transition-colors flex items-center gap-1"
+          >
+            {item.icon && <span>{item.icon}</span>}
+            {item.label}
+          </a>
+        )}
+      </li>
+    ))}
+  </ol>
+</nav>
+
+<!-- JSON-LD Structured Data -->
+<script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema, null, 0)} />
+
+<style>
+  .breadcrumb-nav {
+    @apply py-2;
+  }
+  
+  .breadcrumb-nav ol {
+    @apply list-none p-0 m-0;
+  }
+  
+  .breadcrumb-nav a:hover {
+    @apply underline underline-offset-2;
+  }
+</style>

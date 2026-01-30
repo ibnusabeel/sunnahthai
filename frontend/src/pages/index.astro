@@ -1,9 +1,16 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { BOOK_NAMES } from "../lib/api";
+import { BOOK_NAMES, getDynamicBookNames } from "../lib/api";
 
-// SSG: No server-side API calls - page is pre-rendered as static HTML
-// Stats will be fetched client-side after page load for instant initial render
+// SSR: Fetch dynamic book names from admin (fast parallel fetch)
+// Falls back to BOOK_NAMES if API fails
+let bookNames = { ...BOOK_NAMES };
+try {
+	const dynamicNames = await getDynamicBookNames();
+	bookNames = { ...bookNames, ...dynamicNames };
+} catch (e) {
+	console.error("Failed to fetch dynamic book names:", e);
+}
 
 // Main books
 const MAIN_BOOKS = [
@@ -54,10 +61,7 @@ const bookColors: Record<string, string> = {
 	ibnmajah: "from-lavender-light to-primary-soft border-lavender",
 };
 
-// Static book names for SSG
-const bookNames = { ...BOOK_NAMES };
-
-// API URL for client-side
+// API URL for client-side stats fetch
 const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:3000";
 ---
 
@@ -497,23 +501,21 @@ const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:3000";
 			container.innerHTML = otherBooks
 				.map((book, i) => {
 					const colorClass = colors[i % colors.length];
-					const icon = icons[i % icons.length];
-					const bookInfo = bookNames[book.book] || {
-						th: book.book,
-						ar: "",
-						icon: "📖",
-					};
+					// Use th, ar, icon directly from API response (admin-editable)
+					const bookTh = book.th || book.book;
+					const bookAr = book.ar || "";
+					const bookIcon = book.icon || icons[i % icons.length];
 
 					return `
 					<a href="/${book.book}" class="group relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br ${colorClass} p-5 hover:shadow-glow hover:-translate-y-2 transition-all duration-300">
 						<div class="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-white/40 blur-xl group-hover:scale-150 transition-transform duration-500"></div>
 						<div class="flex items-center gap-4 relative z-10">
 							<div class="w-14 h-14 rounded-xl bg-white/70 backdrop-blur flex items-center justify-center text-3xl group-hover:scale-110 transition-transform shadow-sm">
-								${bookInfo.icon || icon}
+								${bookIcon}
 							</div>
 							<div class="flex-1 min-w-0">
-								<h3 class="font-bold text-base text-text group-hover:text-primary-dark transition-colors">${bookInfo.th}</h3>
-								${bookInfo.ar ? `<p class="font-arabic text-sm text-text-muted" dir="rtl">${bookInfo.ar}</p>` : ""}
+								<h3 class="font-bold text-base text-text group-hover:text-primary-dark transition-colors">${bookTh}</h3>
+								${bookAr ? `<p class="font-arabic text-sm text-text-muted" dir="rtl">${bookAr}</p>` : ""}
 								<div class="flex items-center gap-3 text-sm mt-1">
 									<span class="text-text-muted">${book.total.toLocaleString()} หะดีษ</span>
 									<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">${book.translated.toLocaleString()} แปลแล้ว</span>

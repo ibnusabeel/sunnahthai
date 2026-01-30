@@ -21,6 +21,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
                 nameMap[info.book] = {
                     th: info.th,
                     ar: info.ar,
+                    icon: info.icon || '📖', // Include icon field
                     description: info.description
                 };
             }
@@ -184,23 +185,36 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
         }
     });
 
-    // PUT /api/admin/books/:book - Update book
+    // PUT /api/admin/books/:book - Update book (uses upsert for canonical books not yet in DB)
     fastify.put('/admin/books/:book', async (request, reply) => {
         const { book } = request.params as { book: string };
         const updates = request.body as any;
 
         try {
             const collection = await getCollection('book_info');
-            await collection.updateOne(
+
+            // Use upsert: true to create if not exists (for canonical books)
+            const result = await collection.updateOne(
                 { book },
                 {
                     $set: {
-                        ...updates,
+                        book, // Ensure book field is set
+                        th: updates.th,
+                        ar: updates.ar || '',
+                        description: updates.description || '',
+                        icon: updates.icon || '📖',
+                        color: updates.color || 'blue',
                         updated_at: new Date()
+                    },
+                    $setOnInsert: {
+                        created_at: new Date()
                     }
-                }
+                },
+                { upsert: true }  // Create if not exists!
             );
-            return { message: 'Book updated successfully' };
+
+            const action = result.upsertedCount > 0 ? 'created' : 'updated';
+            return { message: `Book ${action} successfully` };
         } catch (error) {
             fastify.log.error(error);
             return reply.status(500).send({ error: 'Internal Server Error' });

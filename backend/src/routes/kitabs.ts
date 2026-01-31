@@ -25,7 +25,9 @@ const kitabsRoutes: FastifyPluginAsync = async (fastify) => {
                         th: k.name?.th || '',
                         en: k.name?.en || '',
                         id: k.order,
-                        hadith_count: k.hadith_count || 0
+                        hadith_count: k.hadith_count || 0,
+                        min_hadith: k.min_hadith || null,
+                        max_hadith: k.max_hadith || null
                     }))
                 };
             }

@@ -181,7 +181,11 @@ async function translateBatch(limit: number = 10, offset: number = 0, mode: 'kit
                     if (translation.kitab && hadith.kitab?.ar) updateFields['kitab.th'] = translation.kitab;
                     if (translation.bab && hadith.bab?.ar) updateFields['bab.th'] = translation.bab;
                     if (translation.chain && hadith.chain?.ar) updateFields['chain.th'] = translation.chain;
-                    if (translation.content && hadith.content?.ar) updateFields['content.th'] = translation.content;
+                    if (translation.content && hadith.content?.ar) {
+                        updateFields['content.th'] = translation.content;
+                        // Mark as translated when content is translated
+                        updateFields['status'] = 'translated';
+                    }
 
                     if (Object.keys(updateFields).length > 1) {
                         await collection.updateOne(

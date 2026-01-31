@@ -28,7 +28,7 @@ const bookColors: Record<string, { bg: string; accent: string; border: string; b
 const colors = bookColors[book] || { bg: "from-gray-100 to-white", accent: "text-gray-700", border: "border-gray-200", badge: "bg-gray-500" };
 
 // Fetch data
-let kitabs = { book, kitabs: [] as Array<{ kitab_id?: string; ar: string; th: string; en?: string; id?: number }> };
+let kitabs = { book, kitabs: [] as Array<{ kitab_id?: string; ar: string; th: string; en?: string; id?: number; min_hadith?: number | string; max_hadith?: number | string; hadith_count?: number }> };
 let stats = { book: null as string | null, overall: { total: 0, translated: 0, pending: 0, percentage: 0 } };
 let metadata = { book, description: "" };
 
@@ -171,6 +171,15 @@ try {
                         <p class="text-base md:text-lg font-arabic text-text-muted leading-relaxed" dir="rtl">
                           {displayAr}
                         </p>
+                      </div>
+                    )}
+
+                    <!-- Hadith Range -->
+                    {(kitab.min_hadith || kitab.max_hadith) && (
+                      <div class="mt-2 text-sm text-text-muted flex items-center gap-1">
+                        <span class="text-primary">📜</span>
+                        <span>หะดีษ {kitab.min_hadith}{kitab.max_hadith && kitab.min_hadith !== kitab.max_hadith ? `-${kitab.max_hadith}` : ''}</span>
+                        {kitab.hadith_count && <span class="text-text-light">({kitab.hadith_count} หะดีษ)</span>}
                       </div>
                     )}
                   </div>

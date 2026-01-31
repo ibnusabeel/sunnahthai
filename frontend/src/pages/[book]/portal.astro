@@ -2,7 +2,6 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getKitabs, getStats, getBookInfo, BOOK_NAMES, getDynamicBookNames } from "../../lib/api";
 
-// Server mode - dynamic routing
 const { book } = Astro.params as { book: string };
 
 // Fetch dynamic names
@@ -14,19 +13,22 @@ try {
 
 const bookInfo = bookNames[book] || { th: book, ar: "", icon: "📚" };
 
-// Book colors
-const bookColors: Record<string, { bg: string; accent: string; border: string }> = {
-  bukhari: { bg: "from-mint-soft to-mint-light", accent: "text-emerald-700", border: "border-mint" },
-  muslim: { bg: "from-sky-soft to-sky-light", accent: "text-sky-700", border: "border-sky" },
-  nasai: { bg: "from-peach-soft to-peach-light", accent: "text-orange-700", border: "border-peach" },
-  tirmidhi: { bg: "from-pink-soft to-pink-light", accent: "text-pink-700", border: "border-pink" },
-  abudawud: { bg: "from-primary-soft to-lavender-light", accent: "text-primary", border: "border-primary-light" },
-  ibnmajah: { bg: "from-lavender-light to-primary-soft", accent: "text-violet-700", border: "border-lavender" },
+// Book colors - matching homepage pastel styles
+const bookColors: Record<string, { bg: string; accent: string; border: string; badge: string }> = {
+  bukhari: { bg: "from-mint-soft to-mint-light", accent: "text-emerald-700", border: "border-mint", badge: "bg-mint" },
+  muslim: { bg: "from-sky-soft to-sky-light", accent: "text-sky-700", border: "border-sky", badge: "bg-sky-400" },
+  nasai: { bg: "from-peach-soft to-peach-light", accent: "text-orange-700", border: "border-peach", badge: "bg-peach" },
+  tirmidhi: { bg: "from-pink-soft to-pink-light", accent: "text-pink-700", border: "border-pink", badge: "bg-pink" },
+  abudawud: { bg: "from-primary-soft to-lavender-light", accent: "text-primary", border: "border-primary-light", badge: "bg-primary" },
+  ibnmajah: { bg: "from-lavender-light to-primary-soft", accent: "text-violet-700", border: "border-lavender", badge: "bg-lavender" },
+  riyad: { bg: "from-mint-soft to-sky-soft", accent: "text-teal-700", border: "border-mint", badge: "bg-teal-500" },
+  lulu: { bg: "from-amber-100 to-amber-50", accent: "text-amber-700", border: "border-amber-300", badge: "bg-amber-400" },
+  adab: { bg: "from-lime-100 to-green-50", accent: "text-lime-700", border: "border-lime-300", badge: "bg-lime-500" },
 };
-const colors = bookColors[book] || { bg: "from-gray-100 to-white", accent: "text-gray-700", border: "border-gray-200" };
+const colors = bookColors[book] || { bg: "from-gray-100 to-white", accent: "text-gray-700", border: "border-gray-200", badge: "bg-gray-500" };
 
 // Fetch data
-let kitabs = { book, kitabs: [] as Array<{ ar: string; th: string; en?: string }> };
+let kitabs = { book, kitabs: [] as Array<{ kitab_id?: string; ar: string; th: string; en?: string; id?: number }> };
 let stats = { book: null as string | null, overall: { total: 0, translated: 0, pending: 0, percentage: 0 } };
 let metadata = { book, description: "" };
 
@@ -42,65 +44,50 @@ try {
 ---
 
 <BaseLayout title={`${bookInfo.th} | ซุนนะห์ไทย`}>
-  <!-- Hero Section -->
-  <section class={`relative py-16 bg-gradient-to-br ${colors.bg} ${colors.border} border-b-2 overflow-hidden`}>
-    <!-- Decorative Elements -->
-    <div class="absolute inset-0 overflow-hidden">
-      <div class="absolute top-10 left-10 w-32 h-32 bg-white/30 rounded-full blur-2xl"></div>
-      <div class="absolute bottom-10 right-10 w-40 h-40 bg-white/20 rounded-full blur-3xl"></div>
-    </div>
+  <!-- Hero Section with Pastel Gradient -->
+  <section class={`relative py-16 md:py-20 bg-gradient-to-br ${colors.bg} ${colors.border} border-b-2 overflow-hidden`}>
+    <!-- Decorative blobs - matching homepage style -->
+    <div class="absolute top-10 right-10 w-72 h-72 bg-pink-light/30 blob blur-3xl"></div>
+    <div class="absolute top-20 left-10 w-64 h-64 bg-primary-light/20 blob blur-3xl"></div>
+    <div class="absolute bottom-10 right-1/4 w-48 h-48 bg-mint-light/30 blob blur-3xl"></div>
 
     <div class="container mx-auto px-4 relative z-10">
-      <div class="max-w-3xl mx-auto text-center">
-        <!-- Book Icon -->
-        <div class="inline-flex items-center justify-center w-20 h-20 bg-white/80 rounded-full shadow-lg mb-6">
+      <div class="max-w-3xl mx-auto text-center animate-fade-in">
+        <!-- Icon Badge -->
+        <div class="inline-flex items-center justify-center w-20 h-20 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg mb-6 transform hover:scale-110 transition-transform duration-300">
           <span class="text-4xl">{bookInfo.icon}</span>
         </div>
 
-        <!-- Title -->
-        <h1 class="text-3xl md:text-4xl font-bold text-text mb-2">
+        <!-- Thai Title -->
+        <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold text-text mb-2">
           {bookInfo.th}
         </h1>
-        <p class="text-xl font-arabic text-text-muted mb-6" dir="rtl">
+
+        <!-- Arabic Title -->
+        <p class="text-xl md:text-2xl font-arabic text-text-muted mb-8" dir="rtl">
           {bookInfo.ar}
         </p>
 
-        <!-- Stats -->
-        <div class="flex flex-wrap justify-center gap-4 text-sm">
-          <div class="bg-white/70 backdrop-blur px-4 py-2 rounded-full shadow-sm">
-            📚 <span class="font-bold">{stats.overall.total.toLocaleString()}</span> หะดีษ
+        <!-- Stats Pills -->
+        <div class="flex flex-wrap justify-center gap-3 mb-8">
+          <div class="bg-white/70 backdrop-blur-sm px-5 py-2.5 rounded-full shadow-sm flex items-center gap-2">
+            <span>📚</span>
+            <span class="font-bold">{stats.overall.total.toLocaleString()}</span>
+            <span class="text-text-muted text-sm">หะดีษ</span>
           </div>
-          <div class="bg-white/70 backdrop-blur px-4 py-2 rounded-full shadow-sm">
-            ✅ <span class="font-bold">{stats.overall.translated.toLocaleString()}</span> แปลแล้ว
+          <div class="bg-white/70 backdrop-blur-sm px-5 py-2.5 rounded-full shadow-sm flex items-center gap-2">
+            <span>✅</span>
+            <span class="font-bold">{stats.overall.translated.toLocaleString()}</span>
+            <span class="text-text-muted text-sm">แปลแล้ว</span>
           </div>
-          <div class="bg-white/70 backdrop-blur px-4 py-2 rounded-full shadow-sm">
-            📊 <span class="font-bold text-primary">{stats.overall.percentage}%</span>
+          <div class="bg-white/70 backdrop-blur-sm px-5 py-2.5 rounded-full shadow-sm flex items-center gap-2">
+            <span>📊</span>
+            <span class="font-bold text-primary">{stats.overall.percentage}%</span>
           </div>
         </div>
 
-        <!-- Description (if exists) -->
-        {metadata.description && (
-          <div class="mt-8 max-w-2xl mx-auto text-left relative">
-             <div class="bg-white/60 backdrop-blur rounded-2xl p-6 shadow-sm border border-white/50">
-                <h3 class="font-bold text-gray-800 mb-2 flex items-center gap-2">
-                  ℹ️ เกี่ยวกับหนังสือ
-                </h3>
-                <div id="desc-container" class="relative overflow-hidden transition-all duration-500 max-h-[100px]">
-                  <p class="text-gray-600 leading-relaxed whitespace-pre-line text-sm">
-                    {metadata.description}
-                  </p>
-                  <div id="desc-fade" class="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-white/90 to-transparent"></div>
-                </div>
-                <button id="btn-readmore" class="mt-2 text-primary text-sm font-medium hover:underline flex items-center gap-1">
-                  <span>อ่านต่อ</span>
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                </button>
-             </div>
-          </div>
-        )}
-
-        <!-- Action Links -->
-        <div class="flex flex-wrap justify-center gap-3 mt-6">
+        <!-- Quick Actions -->
+        <div class="flex flex-wrap justify-center gap-3">
           <a href={`/${book}?view=all`} class="btn btn-primary">
             📖 ดูหะดีษทั้งหมด
           </a>
@@ -112,55 +99,87 @@ try {
     </div>
   </section>
 
-  <!-- Kitab List -->
-  <section class="container mx-auto px-4 py-8">
+  <!-- Search Section -->
+  <section class="sticky top-0 z-30 bg-white/90 backdrop-blur-lg border-b border-gray-100 shadow-sm">
+    <div class="container mx-auto px-4 py-4">
+      <div class="max-w-2xl mx-auto">
+        <div class="relative">
+          <input
+            type="text"
+            id="kitab-search"
+            placeholder="🔍 ค้นหาหมวดหมู่... (ไทย/อาหรับ)"
+            class="w-full px-5 py-3.5 pl-12 bg-gray-50 border-2 border-gray-200 rounded-2xl text-text placeholder-text-light focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200"
+          />
+          <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+          <span id="search-count" class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-text-muted hidden"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kitab List Section -->
+  <section class="container mx-auto px-4 py-10">
     <div class="max-w-4xl mx-auto">
-      <h2 class="text-xl font-bold text-text mb-6 flex items-center gap-2">
-        📁 หมวดหมู่ (กิตาบ)
-        <span class="text-sm font-normal text-text-muted">
+      <!-- Section Header -->
+      <div class="flex items-center justify-between mb-8">
+        <h2 class="text-xl md:text-2xl font-bold text-text flex items-center gap-3">
+          <span class={`w-10 h-10 rounded-xl ${colors.badge} flex items-center justify-center text-white`}>📁</span>
+          หมวดหมู่ทั้งหมด
+        </h2>
+        <span id="kitab-counter" class="text-sm text-text-muted bg-surface px-4 py-2 rounded-full">
           {kitabs.kitabs.length} หมวด
         </span>
-      </h2>
+      </div>
 
       {kitabs.kitabs.length > 0 ? (
-        <div class="space-y-2">
+        <div id="kitab-list" class="space-y-3">
           {kitabs.kitabs.map((kitab, index) => {
-            const displayName = kitab.th || kitab.en || kitab.ar;
+            const displayTh = kitab.th || kitab.en || '';
+            const displayAr = kitab.ar || '';
             const filterValue = encodeURIComponent(kitab.th || kitab.en || kitab.ar);
-            
             const targetUrl = (kitabs.kitabs.length === 1) ? `/${book}?view=all` : `/${book}?kitab=${filterValue}`;
             
             return (
               <a
                 href={targetUrl}
-                class={`block group p-4 bg-white rounded-xl border-2 ${colors.border} hover:shadow-md hover:border-primary transition-all duration-200`}
+                class={`kitab-card group block bg-white rounded-2xl border-2 ${colors.border} hover:shadow-lg hover:border-primary transition-all duration-300 overflow-hidden`}
+                data-th={displayTh.toLowerCase()}
+                data-ar={displayAr}
               >
-                <div class="flex items-center gap-4">
+                <div class="flex items-stretch">
                   <!-- Number Badge -->
-                  <div class={`w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-br ${colors.bg} flex items-center justify-center font-bold ${colors.accent} shadow-sm group-hover:scale-110 transition-transform`}>
-                    {index + 1}
+                  <div class={`flex-shrink-0 w-16 md:w-20 bg-gradient-to-br ${colors.bg} flex items-center justify-center`}>
+                    <span class={`text-xl md:text-2xl font-bold ${colors.accent}`}>{index + 1}</span>
                   </div>
                   
-                  <!-- Text Content -->
-                  <div class="flex-1 min-w-0">
-                    {/* Thai or English Name */}
-                    <div class="font-medium text-text md:float-left group-hover:text-primary transition-colors">
-                      {kitab.th || kitab.en || displayName}
+                  <!-- Content -->
+                  <div class="flex-1 p-4 md:p-5 min-w-0">
+                    <!-- Thai Name -->
+                    <div class="flex items-start gap-2 mb-2">
+                      
+                      <h3 class={`text-base md:text-lg font-semibold text-text group-hover:text-primary transition-colors leading-snug`}>
+                        {displayTh || <span class="text-text-light italic">ยังไม่มีชื่อไทย</span>}
+                      </h3>
                     </div>
                     
-                    {/* Arabic Name - Only show if different from display */}
-                    {kitab.ar && (kitab.th || kitab.en) && (
-                      <div class="text-xl font-arabic md:float-right text-text-muted mt-1" dir="rtl">
-                        {kitab.ar}
+                    <!-- Arabic Name -->
+                    {displayAr && (
+                      <div class="flex items-start gap-2">
+                        
+                        <p class="text-base md:text-lg font-arabic text-text-muted leading-relaxed" dir="rtl">
+                          {displayAr}
+                        </p>
                       </div>
                     )}
-                    
-                
                   </div>
 
                   <!-- Arrow -->
-                  <div class="text-text-light group-hover:text-primary group-hover:translate-x-1 transition-all">
-                    →
+                  <div class="flex-shrink-0 flex items-center px-4 md:px-5 text-text-light group-hover:text-primary group-hover:translate-x-1 transition-all duration-300">
+                    <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
                   </div>
                 </div>
               </a>
@@ -168,40 +187,85 @@ try {
           })}
         </div>
       ) : (
-        <div class="text-center py-16 bg-surface rounded-xl">
-          <div class="text-4xl mb-4">📂</div>
-          <p class="text-text-muted">ไม่พบหมวดหมู่</p>
+        <div class="text-center py-16 bg-surface rounded-3xl">
+          <div class="text-5xl mb-4">📂</div>
+          <p class="text-lg text-text-muted mb-2">ไม่พบหมวดหมู่</p>
+          <p class="text-text-light">ยังไม่มีข้อมูลหมวดหมู่สำหรับหนังสือนี้</p>
         </div>
       )}
+
+      <!-- No Results Message -->
+      <div id="no-results" class="hidden text-center py-16 bg-surface rounded-3xl mt-4">
+        <div class="text-5xl mb-4">🔍</div>
+        <p class="text-lg text-text-muted mb-2">ไม่พบผลลัพธ์</p>
+        <p class="text-text-light">ลองค้นหาด้วยคำค้นอื่น</p>
+      </div>
     </div>
   </section>
 
-  <script>
-    const container = document.getElementById('desc-container');
-    const btn = document.getElementById('btn-readmore');
-    const fade = document.getElementById('desc-fade');
-    let isExpanded = false;
+  <!-- Description Section (if exists) -->
+  {metadata.description && (
+    <section class="container mx-auto px-4 pb-12">
+      <div class="max-w-4xl mx-auto">
+        <div class={`bg-gradient-to-br ${colors.bg} rounded-3xl p-6 md:p-8 border-2 ${colors.border}`}>
+          <h3 class="font-bold text-text mb-4 flex items-center gap-3 text-lg">
+            <span class={`w-10 h-10 rounded-xl ${colors.badge} flex items-center justify-center text-white`}>ℹ️</span>
+            เกี่ยวกับหนังสือ
+          </h3>
+          <p class="text-text-muted leading-relaxed whitespace-pre-line">
+            {metadata.description}
+          </p>
+        </div>
+      </div>
+    </section>
+  )}
 
-    if (container && btn && fade) {
-      // Check if content is short enough to not need read more
-      if (container.scrollHeight <= 100) {
-        btn.style.display = 'none';
-        fade.style.display = 'none';
-        container.classList.remove('max-h-[100px]');
-      } else {
-        btn.addEventListener('click', () => {
-          isExpanded = !isExpanded;
-          if (isExpanded) {
-            container.style.maxHeight = container.scrollHeight + 'px';
-            fade.style.opacity = '0';
-            btn.innerHTML = `<span>ย่อเก็บ</span><svg class="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
+  <script>
+    // Search functionality
+    const searchInput = document.getElementById('kitab-search') as HTMLInputElement;
+    const kitabList = document.getElementById('kitab-list');
+    const kitabCounter = document.getElementById('kitab-counter');
+    const searchCount = document.getElementById('search-count');
+    const noResults = document.getElementById('no-results');
+    const kitabCards = document.querySelectorAll('.kitab-card');
+    const totalKitabs = kitabCards.length;
+
+    if (searchInput && kitabList) {
+      searchInput.addEventListener('input', (e) => {
+        const query = (e.target as HTMLInputElement).value.toLowerCase().trim();
+        let visibleCount = 0;
+
+        kitabCards.forEach((card) => {
+          const th = card.getAttribute('data-th') || '';
+          const ar = card.getAttribute('data-ar') || '';
+          const matches = th.includes(query) || ar.includes(query);
+          
+          if (matches) {
+            (card as HTMLElement).style.display = 'block';
+            visibleCount++;
           } else {
-            container.style.maxHeight = '100px';
-            fade.style.opacity = '1';
-            btn.innerHTML = `<span>อ่านต่อ</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
+            (card as HTMLElement).style.display = 'none';
           }
         });
-      }
+
+        // Update counter
+        if (kitabCounter) {
+          kitabCounter.textContent = query ? `${visibleCount}/${totalKitabs} หมวด` : `${totalKitabs} หมวด`;
+        }
+
+        // Show/hide no results message
+        if (noResults) {
+          noResults.classList.toggle('hidden', visibleCount > 0 || !query);
+        }
+
+        // Show search count badge
+        if (searchCount && query) {
+          searchCount.textContent = `${visibleCount} ผลลัพธ์`;
+          searchCount.classList.remove('hidden');
+        } else if (searchCount) {
+          searchCount.classList.add('hidden');
+        }
+      });
     }
   </script>
 </BaseLayout>

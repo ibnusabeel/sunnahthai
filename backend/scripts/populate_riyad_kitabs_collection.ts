@@ -22,6 +22,9 @@ async function populateRiyadKitabs() {
     const kitabsCollection = db.collection('kitabs');
     const translationsCollection = db.collection('translations');
 
+    console.log('🗑️  Deleting existing riyad kitabs...');
+    await kitabsCollection.deleteMany({ book: 'riyad' });
+
     console.log('Aggregating kitabs from translations...');
 
     // Find all distinct kitabs in riyad translations

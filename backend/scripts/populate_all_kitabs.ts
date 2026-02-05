@@ -45,11 +45,14 @@ async function populateAllKitabs() {
         console.log(`   🗑️  Deleted ${deleteResult.deletedCount} existing kitabs`);
 
         // Aggregate kitabs from translations
+        // For ahmad and similar books, group by kitab.ar since kitab.id is unreliable
+        const groupByField = (book === 'ahmad' || book === 'darimi') ? '$kitab.ar' : '$kitab.id';
+
         const pipeline = [
             { $match: { hadith_book: book } },
             {
                 $group: {
-                    _id: '$kitab.id',
+                    _id: groupByField,
                     ar: { $first: '$kitab.ar' },
                     en: { $first: '$kitab.en' },
                     th: { $first: '$kitab.th' },

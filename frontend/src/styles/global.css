@@ -3,17 +3,23 @@
   Design: Pastel Cute Islamic 🌸
 */
 
-@import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Sans+Thai+Looped:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* Custom Arabic Font - Uthman Taha Naskh */
+@font-face {
+    font-family: 'KFGQPC Hafs';
+    src: url('https://cdn.jsdelivr.net/gh/quratulain/kfgqpc-uthmanic-script-hafs-regular/KFGQPC%20Uthmanic%20Script%20HAFS%20Regular.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 @font-face {
     font-family: 'UthmanTN';
     src: url('/font/UthmanTN.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
     font-display: swap;
-    /* Restrict to Arabic characters only */
-    unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
 }
 
 body {

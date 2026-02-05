@@ -17,6 +17,7 @@ import categoriesRoutes from './routes/categories.js';
 import articlesRoutes from './routes/articles.js';
 import translateRoutes from './routes/translate.js';
 import adminRoutes from './routes/admin.js';
+import quranRoutes from './routes/quran.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,6 +49,7 @@ fastify.register(uploadRoutes, { prefix: '/api' });
 fastify.register(categoriesRoutes, { prefix: '/api' });
 fastify.register(articlesRoutes, { prefix: '/api' });
 fastify.register(translateRoutes, { prefix: '/api' });
+fastify.register(quranRoutes, { prefix: '/api' });
 fastify.register(adminRoutes); // Admin HTML pages
 fastify.register(adminRoutes, { prefix: '/api' }); // Admin CRUD routes
 

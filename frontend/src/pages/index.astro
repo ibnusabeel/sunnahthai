@@ -155,6 +155,101 @@ const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:3000";
 		</div>
 	</section>
 
+	<!-- Quran Section -->
+	<section class="container mx-auto px-4 py-8">
+		<a
+			href="/quran"
+			class="block group relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600 p-8 md:p-12 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border border-white/20"
+		>
+			<!-- Background Pattern -->
+			<div class="absolute inset-0 opacity-10 mix-blend-overlay">
+				<div
+					class="absolute inset-0"
+					style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 60 60%22><circle cx=%2230%22 cy=%2230%22 r=%2228%22 fill=%22none%22 stroke=%22white%22 stroke-width=%221%22/></svg>'); background-size: 60px 60px;"
+				>
+				</div>
+			</div>
+
+			<!-- Glowing orbs -->
+			<div
+				class="absolute top-0 right-0 w-80 h-80 bg-white/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 group-hover:scale-110 transition-transform duration-700"
+			>
+			</div>
+			<div
+				class="absolute bottom-0 left-0 w-60 h-60 bg-emerald-400/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4"
+			>
+			</div>
+
+			<div
+				class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left"
+			>
+				<div class="flex-1 space-y-4">
+					<div
+						class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/20 backdrop-blur-md rounded-full border border-white/30 text-white font-medium text-sm shadow-sm hover:bg-white/30 transition-colors"
+					>
+						<span class="animate-pulse">✨</span>
+						<span>พระดำรัสของอัลลอฮ์</span>
+					</div>
+
+					<div>
+						<h2
+							class="text-4xl md:text-5xl font-bold text-white mb-2 drop-shadow-md tracking-tight"
+						>
+							อัลกุรอาน & ตัฟซีร
+						</h2>
+					</div>
+
+					<p
+						class="text-white/90 text-lg max-w-2xl leading-relaxed drop-shadow-sm"
+					>
+						อ่านอัลกุรอานพร้อมความหมายภาษาไทยและคำอธิบาย (ตัฟซีร)
+						อย่างละเอียด <br class="hidden md:block" />
+						เข้าใจง่าย สำหรับผู้เริ่มศึกษาและผู้สนใจทั่วไป
+					</p>
+
+					<!-- Feature badges -->
+					<div
+						class="flex flex-wrap gap-3 mt-6 justify-center md:justify-start"
+					>
+						<span
+							class="px-3 py-1.5 bg-white/10 backdrop-blur rounded-lg text-white text-sm border border-white/20 flex items-center gap-2"
+						>
+							<span>📜</span> ตัฟซีรญะลาลัยน์
+						</span>
+						<span
+							class="px-3 py-1.5 bg-white/10 backdrop-blur rounded-lg text-white text-sm border border-white/20 flex items-center gap-2"
+						>
+							<span>🇹🇭</span> แปลไทย
+						</span>
+					</div>
+				</div>
+
+				<div
+					class="flex-shrink-0 relative group-hover:scale-105 transition-transform duration-500"
+				>
+					<div
+						class="w-32 h-32 md:w-40 md:h-40 bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-md rounded-3xl flex items-center justify-center text-7xl md:text-8xl shadow-2xl border border-white/40 ring-1 ring-white/20 rotate-3 group-hover:rotate-6 transition-all duration-500"
+					>
+						📖
+					</div>
+					<!-- Decorative sparkles -->
+					<div
+						class="absolute -top-6 -right-6 text-4xl animate-bounce"
+						style="animation-delay: 0s;"
+					>
+						✨
+					</div>
+					<div
+						class="absolute -bottom-4 -left-8 text-3xl animate-bounce"
+						style="animation-delay: 0.5s;"
+					>
+						🌟
+					</div>
+				</div>
+			</div>
+		</a>
+	</section>
+
 	<!-- Books Section - ALL 6 BOOKS -->
 	<section class="container mx-auto px-4 py-16">
 		<div class="text-center mb-12">
@@ -363,7 +458,6 @@ const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:3000";
 <script define:vars={{ API_URL, MAIN_BOOKS, bookNames: BOOK_NAMES }}>
 	// Client-side hydration: Fetch stats after page loads
 	const API_BASE = API_URL;
-	const AHMAD_TOTAL = 26363;
 
 	// Fetch overall stats
 	async function fetchOverallStats() {
@@ -390,18 +484,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:3000";
 		try {
 			const res = await fetch(`${API_BASE}/api/stats/${bookKey}`);
 			if (!res.ok) throw new Error("Failed to fetch book stats");
-			let data = await res.json();
-
-			// Override for Ahmad
-			if (bookKey === "ahmad") {
-				const translated = data.overall.translated;
-				data.overall.total = AHMAD_TOTAL;
-				data.overall.pending = AHMAD_TOTAL - translated;
-				data.overall.percentage = Math.round(
-					(translated / AHMAD_TOTAL) * 100,
-				);
-			}
-
+			const data = await res.json();
 			return data;
 		} catch {
 			return null;
@@ -454,16 +537,6 @@ const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:3000";
 			);
 
 			if (otherBooks.length === 0) return;
-
-			// Override Ahmad
-			const ahmadBook = otherBooks.find((b) => b.book === "ahmad");
-			if (ahmadBook) {
-				ahmadBook.total = AHMAD_TOTAL;
-				ahmadBook.pending = AHMAD_TOTAL - ahmadBook.translated;
-				ahmadBook.percentage = Math.round(
-					(ahmadBook.translated / AHMAD_TOTAL) * 100,
-				);
-			}
 
 			// Sort other books
 			const PREFERRED_ORDER = [

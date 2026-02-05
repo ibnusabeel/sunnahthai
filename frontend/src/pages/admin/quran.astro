@@ -1,0 +1,8 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import QuranManager from "../../components/admin/QuranManager";
+---
+
+<AdminLayout title="จัดการข้อมูลอัลกุรอาน">
+    <QuranManager client:only="react" />
+</AdminLayout>

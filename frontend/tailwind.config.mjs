@@ -48,7 +48,7 @@ export default {
             },
             fontFamily: {
                 thai: ['IBM Plex Sans Thai Looped', 'sans-serif'],
-                arabic: ['UthmanTN', 'Amiri', 'serif'],
+                arabic: ['KFGQPC Hafs', 'UthmanTN', 'Amiri', 'serif'],
                 sans: ['Inter', 'IBM Plex Sans Thai Looped', 'sans-serif'],
             },
             borderRadius: {

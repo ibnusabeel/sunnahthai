@@ -1,0 +1,334 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getSurahThai } from "../../lib/quran-data";
+
+const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:3000";
+
+// Fetch surahs and stats
+let surahs: Array<{
+  id: number;
+  name_arabic: string;
+  name_simple: string;
+  name_complex: string;
+  verses_count: number;
+  revelation_place: string;
+}> = [];
+let stats = { totalSurahs: 0, totalAyahs: 0, translatedTafsir: 0, pendingTafsir: 0, percentage: 0 };
+
+try {
+  const [surahsRes, statsRes] = await Promise.all([
+    fetch(`${API_URL}/api/quran/surahs`),
+    fetch(`${API_URL}/api/quran/stats`)
+  ]);
+  
+  if (surahsRes.ok) {
+    const data = await surahsRes.json();
+    surahs = data.surahs || [];
+  }
+  if (statsRes.ok) {
+    stats = await statsRes.json();
+  }
+} catch (error) {
+  console.error("Failed to fetch Quran data:", error);
+}
+
+// Revelation type icons
+const revelationIcons: Record<string, string> = {
+  makkah: "🕋",
+  madinah: "🕌"
+};
+---
+
+<BaseLayout title="อัลกุรอาน | ซุนนะห์ไทย">
+  <!-- Hero Section -->
+  <section class="relative py-20 md:py-28 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 overflow-hidden">
+    <!-- Decorative Islamic Pattern -->
+    <div class="absolute inset-0 opacity-10">
+      <div class="absolute top-0 left-0 w-full h-full" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22><path d=%22M40 0L80 40L40 80L0 40Z%22 fill=%22none%22 stroke=%22white%22 stroke-width=%220.5%22/></svg>'); background-size: 80px 80px;"></div>
+    </div>
+    
+    <!-- Glowing orbs -->
+    <div class="absolute top-20 right-20 w-96 h-96 bg-yellow-400/20 rounded-full blur-3xl animate-pulse"></div>
+    <div class="absolute bottom-10 left-20 w-80 h-80 bg-cyan-300/20 rounded-full blur-3xl animate-pulse" style="animation-delay: 1s;"></div>
+    
+    <div class="container mx-auto px-4 relative z-10">
+      <div class="max-w-4xl mx-auto text-center">
+        <!-- Quran Icon -->
+        <div class="inline-flex items-center justify-center w-24 h-24 bg-white/20 backdrop-blur-md rounded-3xl shadow-2xl mb-8 transform hover:scale-110 transition-all duration-500 border border-white/30">
+          <span class="text-5xl">📖</span>
+        </div>
+
+        <!-- Arabic Title -->
+        <h1 class="text-4xl md:text-6xl font-arabic text-white mb-4 drop-shadow-lg" dir="rtl">
+          الْقُرْآنُ الْكَرِيمُ
+        </h1>
+
+        <!-- Thai Title -->
+        <p class="text-2xl md:text-3xl text-white/90 mb-4">
+          อัลกุรอานอันทรงเกียรติ
+        </p>
+        
+        <p class="text-lg text-white/80 mb-10 max-w-2xl mx-auto">
+          พร้อมคำแปลภาษาไทย และตัฟซีรอัล-ญะลาลัยน์
+        </p>
+
+        <!-- Stats Pills -->
+        <div class="flex flex-wrap justify-center gap-4 mb-10">
+          <div class="bg-white/20 backdrop-blur-md px-6 py-3 rounded-full border border-white/30 flex items-center gap-3">
+            <span class="text-2xl">📚</span>
+            <div class="text-left">
+              <span class="font-bold text-white text-xl">{stats.totalSurahs}</span>
+              <span class="text-white/70 text-sm block">ซูเราะห์</span>
+            </div>
+          </div>
+          <div class="bg-white/20 backdrop-blur-md px-6 py-3 rounded-full border border-white/30 flex items-center gap-3">
+            <span class="text-2xl">✨</span>
+            <div class="text-left">
+              <span class="font-bold text-white text-xl">{stats.totalAyahs.toLocaleString()}</span>
+              <span class="text-white/70 text-sm block">อายะห์</span>
+            </div>
+          </div>
+          <div class="bg-white/20 backdrop-blur-md px-6 py-3 rounded-full border border-white/30 flex items-center gap-3">
+            <span class="text-2xl">🇹🇭</span>
+            <div class="text-left">
+              <span class="font-bold text-white text-xl">100%</span>
+              <span class="text-white/70 text-sm block">คำแปลไทย</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="max-w-xl mx-auto">
+          <div class="relative">
+            <input 
+              type="text" 
+              id="quran-search"
+              placeholder="ค้นหาซูเราะห์... เช่น อัล-ฟาติหะห์, ยาซีน, البقرة"
+              class="w-full px-6 py-4 rounded-2xl bg-white/95 backdrop-blur-sm shadow-xl text-text placeholder-text-muted focus:outline-none focus:ring-4 focus:ring-yellow-400/50 transition-all"
+            />
+            <button class="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wave divider -->
+    <div class="absolute bottom-0 left-0 right-0">
+      <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full">
+        <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" fill="#F8FAFC"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- Surahs Grid -->
+  <section class="py-12 md:py-16 bg-slate-50">
+    <div class="container mx-auto px-4">
+      <!-- Section Header -->
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold text-text mb-4">
+          รายชื่อซูเราะห์ทั้งหมด
+        </h2>
+        <p class="text-text-muted max-w-2xl mx-auto">
+          เลือกซูเราะห์เพื่ออ่านอัลกุรอานพร้อมคำแปลและตัฟซีร
+        </p>
+      </div>
+
+      <!-- Filter Tabs -->
+      <div class="flex flex-wrap justify-center gap-3 mb-10">
+        <button 
+          class="filter-btn active px-5 py-2 rounded-full bg-emerald-500 text-white font-medium transition-all hover:shadow-lg"
+          data-filter="all"
+        >
+          ทั้งหมด ({surahs.length})
+        </button>
+        <button 
+          class="filter-btn px-5 py-2 rounded-full bg-white text-text-muted font-medium border border-gray-200 hover:border-emerald-300 transition-all"
+          data-filter="makkah"
+        >
+          🕋 มักกะห์ ({surahs.filter(s => s.revelation_place === 'makkah').length})
+        </button>
+        <button 
+          class="filter-btn px-5 py-2 rounded-full bg-white text-text-muted font-medium border border-gray-200 hover:border-emerald-300 transition-all"
+          data-filter="madinah"
+        >
+          🕌 มะดีนะห์ ({surahs.filter(s => s.revelation_place === 'madinah').length})
+        </button>
+      </div>
+
+      <!-- Surahs Grid -->
+      <div id="surahs-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {surahs.map((surah, index) => {
+          const thaiInfo = getSurahThai(surah.id);
+          return (
+          <a 
+            href={`/quran/${surah.id}`}
+            class="surah-card group bg-white rounded-2xl p-5 shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-emerald-200 hover:-translate-y-1"
+            data-revelation={surah.revelation_place}
+            data-name={thaiInfo.name.toLowerCase()}
+            data-arabic={surah.name_arabic}
+          >
+            <!-- Surah Number Badge -->
+            <div class="flex items-start justify-between mb-4">
+              <div class="relative">
+                <div class="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                  <span class="text-white font-bold text-lg">{surah.id}</span>
+                </div>
+                <!-- Glow effect on hover -->
+                <div class="absolute inset-0 w-12 h-12 bg-emerald-400 rounded-xl blur-lg opacity-0 group-hover:opacity-40 transition-opacity"></div>
+              </div>
+              
+              <!-- Revelation Badge -->
+              <span class="text-2xl" title={surah.revelation_place === 'makkah' ? 'มักกะห์' : 'มะดีนะห์'}>
+                {revelationIcons[surah.revelation_place] || '📜'}
+              </span>
+            </div>
+
+            <!-- Surah Names -->
+            <div class="mb-3">
+              <h3 class="font-bold text-text text-lg group-hover:text-emerald-600 transition-colors">
+                {thaiInfo.name}
+              </h3>
+              <p class="font-arabic text-xl text-text-muted" dir="rtl">
+                {surah.name_arabic}
+              </p>
+              {thaiInfo.meaning && (
+                <p class="text-sm text-emerald-600 mt-1">
+                  "{thaiInfo.meaning}"
+                </p>
+              )}
+            </div>
+
+            <!-- Ayah Count -->
+            <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+              <span class="text-sm text-text-muted">
+                {surah.verses_count} อายะห์
+              </span>
+              <span class="text-emerald-500 group-hover:translate-x-1 transition-transform">
+                →
+              </span>
+            </div>
+          </a>
+        )})}
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="hidden text-center py-16">
+        <div class="text-6xl mb-4">🔍</div>
+        <h3 class="text-xl font-bold text-text mb-2">ไม่พบซูเราะห์</h3>
+        <p class="text-text-muted">ลองค้นหาด้วยคำอื่น</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Access Section -->
+  <section class="py-12 bg-white">
+    <div class="container mx-auto px-4">
+      <h2 class="text-2xl font-bold text-center text-text mb-8">ซูเราะห์ยอดนิยม</h2>
+      
+      <div class="flex flex-wrap justify-center gap-4">
+        {[
+          { id: 1, name: "อัล-ฟาติหะห์", arabic: "الفاتحة" },
+          { id: 36, name: "ยาซีน", arabic: "يس" },
+          { id: 55, name: "อัร-เราะห์มาน", arabic: "الرحمن" },
+          { id: 67, name: "อัล-มุลก์", arabic: "الملك" },
+          { id: 78, name: "อัน-นะบะอ์", arabic: "النبأ" },
+          { id: 112, name: "อัล-อิคลาศ", arabic: "الإخلاص" },
+          { id: 114, name: "อัน-นาส", arabic: "الناس" }
+        ].map(s => (
+          <a 
+            href={`/quran/${s.id}`}
+            class="px-5 py-3 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 hover:shadow-lg hover:-translate-y-1 transition-all group"
+          >
+            <span class="font-bold text-emerald-700 group-hover:text-emerald-800">{s.name}</span>
+            <span class="font-arabic text-text-muted ml-2" dir="rtl">{s.arabic}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  // Search functionality
+  const searchInput = document.getElementById('quran-search') as HTMLInputElement;
+  const surahCards = document.querySelectorAll('.surah-card') as NodeListOf<HTMLElement>;
+  const emptyState = document.getElementById('empty-state');
+  const filterBtns = document.querySelectorAll('.filter-btn');
+
+  let currentFilter = 'all';
+
+  function filterCards() {
+    const query = searchInput?.value.toLowerCase() || '';
+    let visibleCount = 0;
+
+    surahCards.forEach(card => {
+      const name = card.dataset.name || '';
+      const arabic = card.dataset.arabic || '';
+      const revelation = card.dataset.revelation || '';
+      
+      const matchesSearch = name.includes(query) || arabic.includes(query);
+      const matchesFilter = currentFilter === 'all' || revelation === currentFilter;
+      
+      if (matchesSearch && matchesFilter) {
+        card.classList.remove('hidden');
+        visibleCount++;
+      } else {
+        card.classList.add('hidden');
+      }
+    });
+
+    if (emptyState) {
+      emptyState.classList.toggle('hidden', visibleCount > 0);
+    }
+  }
+
+  searchInput?.addEventListener('input', filterCards);
+
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterBtns.forEach(b => {
+        b.classList.remove('active', 'bg-emerald-500', 'text-white');
+        b.classList.add('bg-white', 'text-text-muted');
+      });
+      btn.classList.add('active', 'bg-emerald-500', 'text-white');
+      btn.classList.remove('bg-white', 'text-text-muted');
+      
+      currentFilter = (btn as HTMLElement).dataset.filter || 'all';
+      filterCards();
+    });
+  });
+</script>
+
+<style>
+  .surah-card.hidden {
+    display: none;
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .surah-card {
+    animation: fadeInUp 0.5s ease-out forwards;
+  }
+  
+  .surah-card:nth-child(1) { animation-delay: 0.02s; }
+  .surah-card:nth-child(2) { animation-delay: 0.04s; }
+  .surah-card:nth-child(3) { animation-delay: 0.06s; }
+  .surah-card:nth-child(4) { animation-delay: 0.08s; }
+  .surah-card:nth-child(5) { animation-delay: 0.1s; }
+  .surah-card:nth-child(6) { animation-delay: 0.12s; }
+  .surah-card:nth-child(7) { animation-delay: 0.14s; }
+  .surah-card:nth-child(8) { animation-delay: 0.16s; }
+</style>

@@ -29,8 +29,7 @@ const statsRoutes: FastifyPluginAsync = async (fastify) => {
         try {
             const collection = await getCollection('translations');
 
-            let total = await collection.countDocuments({ hadith_book: book });
-            if (book === 'ahmad') total = 26363;
+            const total = await collection.countDocuments({ hadith_book: book });
             const translated = await collection.countDocuments({ hadith_book: book, status: 'translated' });
             const pending = total - translated;
             const percentage = total > 0 ? Math.round((translated / total) * 100) : 0;

@@ -59,13 +59,8 @@ const booksRoutes: FastifyPluginAsync = async (fastify) => {
 
             for (const doc of statsResult) {
                 if (doc._id) {
-                    let total = doc.total;
+                    const total = doc.total;
                     const translated = doc.translated;
-
-                    // Override for Ahmad
-                    if (doc._id === 'ahmad') {
-                        total = 26363;
-                    }
 
                     // Get names: DB override > Hardcoded fallback > default
                     const dbInfo = bookInfoMap[doc._id] || {};

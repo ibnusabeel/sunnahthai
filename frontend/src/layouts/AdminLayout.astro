@@ -5,6 +5,8 @@ interface Props {
 
 const { title } = Astro.props;
 
+import "../styles/global.css";
+
 // Auth Check
 const cookie = Astro.cookies.get("admin_key");
 const validKey = import.meta.env.ADMIN_SECRET || "bismillah";
@@ -20,6 +22,7 @@ const menuItems = [
     { name: "จัดการหนังสือ", href: "/admin/books", icon: "📚" },
     { name: "จัดการบท (Kitabs)", href: "/admin/kitabs", icon: "📑" },
     { name: "จัดการหะดีษ", href: "/admin/hadiths", icon: "📝" },
+    { name: "จัดการกุรอ่าน", href: "/admin/quran", icon: "📖" },
     { name: "จัดการบทความ", href: "/admin/articles", icon: "📰" },
     { name: "จัดการหมวดหมู่", href: "/admin/categories", icon: "🏷️" },
 ];
@@ -37,13 +40,9 @@ const menuItems = [
             href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@300;400;500;600;700&family=Amiri:wght@400;700&display=swap"
             rel="stylesheet"
         />
-        <script src="https://cdn.tailwindcss.com"></script>
         <style>
             body {
                 font-family: "IBM Plex Sans Thai Looped", sans-serif;
-            }
-            .font-arabic {
-                font-family: "Amiri", serif;
             }
         </style>
     </head>

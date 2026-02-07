@@ -1,0 +1,663 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { API_BASE_URL } from "../../lib/api";
+---
+
+<AdminLayout title="จัดการตัฟซีรอัซ-ซะอ์ดีย์">
+    <style>
+        .editor-card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+        }
+        .form-select {
+            padding: 0.75rem 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+        .form-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .arabic-text {
+            font-family: "KFGQPC Hafs", serif;
+            font-size: 1.25rem;
+            line-height: 2;
+            text-align: right;
+        }
+        :global(.rte-wrapper) {
+            max-width: 100% !important;
+        }
+    </style>
+
+    <!-- Stats Card -->
+    <div
+        id="stats-card"
+        class="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl p-6 text-white mb-6"
+    >
+        <h2 class="text-xl font-bold mb-4">📘 ตัฟซีรอัซ-ซะอ์ดีย์</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white/20 rounded-xl p-4 text-center">
+                <div id="stat-total" class="text-3xl font-bold">-</div>
+                <div class="text-sm opacity-80">ทั้งหมด</div>
+            </div>
+            <div class="bg-white/20 rounded-xl p-4 text-center">
+                <div
+                    id="stat-translated"
+                    class="text-3xl font-bold text-green-200"
+                >
+                    -
+                </div>
+                <div class="text-sm opacity-80">แปลแล้ว</div>
+            </div>
+            <div class="bg-white/20 rounded-xl p-4 text-center">
+                <div
+                    id="stat-untranslated"
+                    class="text-3xl font-bold text-yellow-200"
+                >
+                    -
+                </div>
+                <div class="text-sm opacity-80">ยังไม่แปล</div>
+            </div>
+            <div class="bg-white/20 rounded-xl p-4 text-center">
+                <div id="stat-percent" class="text-3xl font-bold">-</div>
+                <div class="text-sm opacity-80">ความคืบหน้า</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Surah Selector -->
+    <div class="editor-card mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2"
+            >เลือกสูเราะฮฺ</label
+        >
+        <select id="surah-select" class="form-select w-full md:w-auto">
+            <!-- Populated by JS -->
+        </select>
+    </div>
+
+    <!-- Entries Table -->
+    <div
+        class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+    >
+        <div id="entries-list" class="overflow-x-auto">
+            <div class="p-8 text-center text-gray-500">กำลังโหลด...</div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div id="pagination" class="flex justify-center gap-2 mt-6 hidden">
+        <button
+            id="prev-btn"
+            class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+            >← ก่อนหน้า</button
+        >
+        <span
+            id="page-info"
+            class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg"
+            >หน้า 1 / 1</span
+        >
+        <button
+            id="next-btn"
+            class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+            >ถัดไป →</button
+        >
+    </div>
+
+    <!-- Hidden config -->
+    <div id="config" data-api-url={API_BASE_URL} class="hidden"></div>
+
+    <!-- Edit Modal -->
+    <div
+        id="edit-modal"
+        class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm"
+    >
+        <div
+            class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col m-4 animate-in fade-in zoom-in duration-200"
+        >
+            <div
+                class="p-4 border-b flex justify-between items-center bg-gray-50"
+            >
+                <div>
+                    <h3
+                        class="font-bold text-lg text-gray-800 flex items-center gap-2"
+                    >
+                        <span>✏️</span> แก้ไขคำแปล
+                    </h3>
+                    <p id="modal-ayah-info" class="text-sm text-gray-600 mt-1">
+                        สูเราะฮฺ ...
+                    </p>
+                </div>
+                <button
+                    id="modal-close"
+                    class="text-gray-400 hover:text-red-500 text-3xl px-2 leading-none transition-colors"
+                    >&times;</button
+                >
+            </div>
+
+            <div class="p-6 flex-1 overflow-y-auto bg-white">
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2"
+                        >ภาษาอาหรับ</label
+                    >
+                    <div
+                        id="modal-arabic"
+                        class="p-4 bg-gray-50 border border-gray-100 rounded-lg text-right text-xl leading-loose font-arabic text-gray-800"
+                    >
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2"
+                        >คำแปลภาษาไทย</label
+                    >
+                    <!-- Formatting Toolbar hint -->
+                    <div id="editor-container" class="bg-white rounded-lg">
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="p-4 border-t bg-gray-50 flex justify-end gap-3 sticky bottom-0"
+            >
+                <button
+                    id="modal-cancel"
+                    class="px-5 py-2.5 text-gray-700 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                    >ยกเลิก</button
+                >
+                <button
+                    id="modal-save"
+                    class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-colors flex items-center gap-2"
+                >
+                    <span>💾</span> บันทึก
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quill CSS -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css"
+        rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"
+    ></script>
+
+    <script is:inline>
+        var configEl = document.getElementById("config");
+        var API_URL =
+            configEl && configEl.dataset.apiUrl
+                ? configEl.dataset.apiUrl
+                : "http://localhost:3000";
+
+        var surahNames = [
+            "الفاتحة",
+            "البقرة",
+            "آل عمران",
+            "النساء",
+            "المائدة",
+            "الأنعام",
+            "الأعراف",
+            "الأنفال",
+            "التوبة",
+            "يونس",
+            "هود",
+            "يوسف",
+            "الرعد",
+            "إبراهيم",
+            "الحجر",
+            "النحل",
+            "الإسراء",
+            "الكهف",
+            "مريم",
+            "طه",
+            "الأنبياء",
+            "الحج",
+            "المؤمنون",
+            "النور",
+            "الفرقان",
+            "الشعراء",
+            "النمل",
+            "القصص",
+            "العنكبوت",
+            "الروم",
+            "لقمان",
+            "السجدة",
+            "الأحزاب",
+            "سبأ",
+            "فاطر",
+            "يس",
+            "الصافات",
+            "ص",
+            "الزمر",
+            "غافر",
+            "فصلت",
+            "الشورى",
+            "الزخرف",
+            "الدخان",
+            "الجاثية",
+            "الأحقاف",
+            "محمد",
+            "الفتح",
+            "الحجرات",
+            "ق",
+            "الذاريات",
+            "الطور",
+            "النجم",
+            "القمر",
+            "الرحمن",
+            "الواقعة",
+            "الحديد",
+            "المجادلة",
+            "الحشر",
+            "الممتحنة",
+            "الصف",
+            "الجمعة",
+            "المنافقون",
+            "التغابن",
+            "الطلاق",
+            "التحريم",
+            "الملك",
+            "القلم",
+            "الحاقة",
+            "المعارج",
+            "نوح",
+            "الجن",
+            "المزمل",
+            "المدثر",
+            "القيامة",
+            "الإنسان",
+            "المرسلات",
+            "النبأ",
+            "النازعات",
+            "عبس",
+            "التكوير",
+            "الانفطار",
+            "المطففين",
+            "الانشقاق",
+            "البروج",
+            "الطارق",
+            "الأعلى",
+            "الغاشية",
+            "الفجر",
+            "البلد",
+            "الشمس",
+            "الليل",
+            "الضحى",
+            "الشرح",
+            "التين",
+            "العلق",
+            "القدر",
+            "البينة",
+            "الزلزلة",
+            "العاديات",
+            "القارعة",
+            "التكاثر",
+            "العصر",
+            "الهمزة",
+            "الفيل",
+            "قريش",
+            "الماعون",
+            "الكوثر",
+            "الكافرون",
+            "النصر",
+            "المسد",
+            "الإخلاص",
+            "الفلق",
+            "الناس",
+        ];
+
+        var currentSurah = 1;
+        var currentPage = 1;
+        var totalPages = 1;
+        var editingId = null;
+        var quill = null;
+
+        function initSurahSelect() {
+            var select = document.getElementById("surah-select");
+            surahNames.forEach(function (name, i) {
+                var option = document.createElement("option");
+                option.value = String(i + 1);
+                option.textContent = i + 1 + ". " + name;
+                select.appendChild(option);
+            });
+            select.addEventListener("change", function () {
+                currentSurah = parseInt(select.value);
+                currentPage = 1;
+                fetchEntries();
+            });
+        }
+
+        function fetchStats() {
+            fetch(API_URL + "/api/admin/tafsir-assadi/stats")
+                .then(function (res) {
+                    return res.json();
+                })
+                .then(function (data) {
+                    document.getElementById("stat-total").textContent =
+                        data.total.toLocaleString();
+                    document.getElementById("stat-translated").textContent =
+                        data.translated.toLocaleString();
+                    document.getElementById("stat-untranslated").textContent =
+                        data.untranslated.toLocaleString();
+                    document.getElementById("stat-percent").textContent =
+                        data.percentage + "%";
+                })
+                .catch(function (e) {
+                    console.error("Failed to fetch stats:", e);
+                });
+        }
+
+        function fetchEntries() {
+            var container = document.getElementById("entries-list");
+            container.innerHTML =
+                '<div class="p-8 text-center text-gray-500">กำลังโหลด...</div>';
+
+            fetch(
+                API_URL +
+                    "/api/admin/tafsir-assadi?surah=" +
+                    currentSurah +
+                    "&page=" +
+                    currentPage +
+                    "&limit=20",
+            )
+                .then(function (res) {
+                    return res.json();
+                })
+                .then(function (data) {
+                    totalPages = data.pages;
+
+                    if (data.entries.length === 0) {
+                        container.innerHTML =
+                            '<div class="p-8 text-center text-gray-500">ไม่พบข้อมูล</div>';
+                        return;
+                    }
+
+                    // Build table
+                    var tableHTML =
+                        '<table class="w-full text-left">' +
+                        '<thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">' +
+                        "<tr>" +
+                        '<th class="px-4 py-3 w-20">อายะฮฺ</th>' +
+                        '<th class="px-4 py-3 w-24 text-center">สถานะ</th>' +
+                        '<th class="px-4 py-3 text-right" style="min-width:200px">อาหรับ</th>' +
+                        '<th class="px-4 py-3" style="min-width:250px">คำแปลไทย</th>' +
+                        '<th class="px-4 py-3 w-24 text-right">จัดการ</th>' +
+                        "</tr>" +
+                        "</thead>" +
+                        '<tbody class="divide-y divide-gray-100">';
+
+                    data.entries.forEach(function (entry) {
+                        var ayahRange =
+                            entry.ayah_end !== entry.ayah_start
+                                ? "-" + entry.ayah_end
+                                : "";
+                        var statusBadge = entry.text_th
+                            ? '<span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full whitespace-nowrap">✓ แปลแล้ว</span>'
+                            : '<span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full whitespace-nowrap">รอแปล</span>';
+                        var thaiPreview = entry.text_th
+                            ? '<span class="line-clamp-2" title="' +
+                              entry.text_th
+                                  .replace(/"/g, "&quot;")
+                                  .replace(/<[^>]*>/g, "") +
+                              '">' +
+                              entry.text_th
+                                  .replace(/<[^>]*>/g, "")
+                                  .substring(0, 100) +
+                              "</span>"
+                            : '<span class="text-gray-400 italic">ยังไม่มีคำแปล</span>';
+                        var arabicPreview =
+                            '<span class="line-clamp-2 font-arabic" dir="rtl" title="' +
+                            entry.text_ar.replace(/"/g, "&quot;") +
+                            '">' +
+                            entry.text_ar.substring(0, 120) +
+                            (entry.text_ar.length > 120 ? "..." : "") +
+                            "</span>";
+
+                        tableHTML +=
+                            '<tr class="hover:bg-gray-50 transition-colors">' +
+                            '<td class="px-4 py-3 text-sm font-medium text-blue-600 whitespace-nowrap align-middle">' +
+                            entry.ayah_start +
+                            ayahRange +
+                            "</td>" +
+                            '<td class="px-4 py-3 text-center align-middle">' +
+                            statusBadge +
+                            "</td>" +
+                            '<td class="px-4 py-3 text-right text-base leading-relaxed text-gray-800 align-top">' +
+                            arabicPreview +
+                            "</td>" +
+                            '<td class="px-4 py-3 text-sm leading-relaxed text-gray-700 align-top">' +
+                            thaiPreview +
+                            "</td>" +
+                            '<td class="px-4 py-3 text-right align-middle">' +
+                            '<button class="edit-btn text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors text-sm" ' +
+                            'data-id="' +
+                            entry.id +
+                            '" ' +
+                            'data-arabic="' +
+                            encodeURIComponent(entry.text_ar) +
+                            '" ' +
+                            'data-thai="' +
+                            encodeURIComponent(entry.text_th || "") +
+                            '" ' +
+                            'data-ayah-start="' +
+                            entry.ayah_start +
+                            '" ' +
+                            'data-ayah-end="' +
+                            entry.ayah_end +
+                            '">' +
+                            "✏️ แก้ไข" +
+                            "</button>" +
+                            "</td>" +
+                            "</tr>";
+                    });
+
+                    tableHTML += "</tbody></table>";
+                    container.innerHTML = tableHTML;
+
+                    container
+                        .querySelectorAll(".edit-btn")
+                        .forEach(function (btn) {
+                            btn.addEventListener("click", function (e) {
+                                var target = e.currentTarget;
+                                openEditModal(
+                                    target.dataset.id,
+                                    decodeURIComponent(target.dataset.arabic),
+                                    decodeURIComponent(target.dataset.thai),
+                                    parseInt(target.dataset.ayahStart),
+                                    parseInt(target.dataset.ayahEnd),
+                                );
+                            });
+                        });
+
+                    updatePagination();
+                })
+                .catch(function (e) {
+                    console.error("Failed to fetch entries:", e);
+                    container.innerHTML =
+                        '<div class="p-8 text-center text-red-500">เกิดข้อผิดพลาด</div>';
+                });
+        }
+
+        function updatePagination() {
+            var pagination = document.getElementById("pagination");
+            var pageInfo = document.getElementById("page-info");
+            var prevBtn = document.getElementById("prev-btn");
+            var nextBtn = document.getElementById("next-btn");
+
+            if (totalPages > 1) {
+                pagination.classList.remove("hidden");
+                pageInfo.textContent =
+                    "หน้า " + currentPage + " / " + totalPages;
+                prevBtn.disabled = currentPage === 1;
+                nextBtn.disabled = currentPage === totalPages;
+            } else {
+                pagination.classList.add("hidden");
+            }
+        }
+
+        function openEditModal(id, arabic, thai, ayahStart, ayahEnd) {
+            editingId = id;
+            var modal = document.getElementById("edit-modal");
+            var ayahInfo =
+                "สูเราะฮฺ " + currentSurah + " - อายะฮฺ " + ayahStart;
+            if (ayahEnd !== ayahStart) {
+                ayahInfo += " ถึง " + ayahEnd;
+            }
+            document.getElementById("modal-ayah-info").textContent = ayahInfo;
+            document.getElementById("modal-arabic").textContent = arabic;
+
+            // Setup Editor Container
+            var container = document.getElementById("editor-container");
+            container.innerHTML =
+                '<div id="quill-editor" style="height: 300px;"></div>';
+
+            modal.classList.remove("hidden");
+
+            // Init Quill
+            setTimeout(function () {
+                if (document.getElementById("quill-editor")) {
+                    quill = new Quill("#quill-editor", {
+                        theme: "snow",
+                        modules: {
+                            toolbar: [
+                                [
+                                    { font: [] },
+                                    { size: ["small", false, "large", "huge"] },
+                                ],
+                                ["bold", "italic", "underline", "strike"],
+                                [{ color: [] }, { background: [] }],
+                                [{ script: "sub" }, { script: "super" }],
+                                [
+                                    { header: 1 },
+                                    { header: 2 },
+                                    "blockquote",
+                                    "code-block",
+                                ],
+                                [
+                                    { list: "ordered" },
+                                    { list: "bullet" },
+                                    { indent: "-1" },
+                                    { indent: "+1" },
+                                ],
+                                [{ direction: "rtl" }, { align: [] }],
+                                ["link", "image", "video", "formula"],
+                                ["clean"],
+                            ],
+                        },
+                        placeholder: "พิมพ์คำแปลภาษาไทยที่นี่...",
+                    });
+
+                    if (thai) {
+                        quill.root.innerHTML = thai;
+                    }
+                }
+            }, 100);
+        }
+
+        function closeModal() {
+            var modal = document.getElementById("edit-modal");
+            modal.classList.add("hidden");
+            editingId = null;
+            quill = null;
+            document.getElementById("editor-container").innerHTML = "";
+        }
+
+        function saveTranslation() {
+            if (!editingId) return;
+
+            var saveBtn = document.getElementById("modal-save");
+            saveBtn.disabled = true;
+            saveBtn.textContent = "กำลังบันทึก...";
+
+            var text_th = "";
+            if (quill) {
+                text_th = quill.root.innerHTML;
+            }
+
+            fetch(API_URL + "/api/admin/tafsir-assadi/" + editingId, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text_th: text_th }),
+            })
+                .then(function (res) {
+                    if (res.ok) {
+                        closeModal();
+                        fetchEntries();
+                        fetchStats();
+                    } else {
+                        alert("บันทึกไม่สำเร็จ");
+                    }
+                })
+                .catch(function (e) {
+                    console.error("Failed to save:", e);
+                    alert("เกิดข้อผิดพลาด");
+                })
+                .finally(function () {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = "💾 บันทึก";
+                });
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            initSurahSelect();
+            fetchStats();
+            fetchEntries();
+
+            document
+                .getElementById("prev-btn")
+                .addEventListener("click", function () {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        fetchEntries();
+                    }
+                });
+
+            document
+                .getElementById("next-btn")
+                .addEventListener("click", function () {
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        fetchEntries();
+                    }
+                });
+
+            document
+                .getElementById("modal-close")
+                .addEventListener("click", closeModal);
+            document
+                .getElementById("modal-cancel")
+                .addEventListener("click", closeModal);
+            document
+                .getElementById("modal-save")
+                .addEventListener("click", saveTranslation);
+
+            document
+                .getElementById("edit-modal")
+                .addEventListener("click", function (e) {
+                    if (e.target === e.currentTarget) closeModal();
+                });
+        });
+    </script>
+</AdminLayout>

@@ -550,6 +550,132 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
             return reply.status(500).send({ error: 'Internal Server Error' });
         }
     });
+
+    // --------------------------------------------------------------------------------
+    // TAFSIR AS-SA'DI MANAGEMENT
+    // --------------------------------------------------------------------------------
+
+    // GET /api/admin/tafsir-assadi - Get all entries (with pagination)
+    fastify.get('/admin/tafsir-assadi', async (request, reply) => {
+        const { surah, page = '1', limit = '50' } = request.query as any;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
+        try {
+            const collection = await getCollection('tafsir_assadi');
+
+            const filter: any = {};
+            if (surah) filter.surah_id = parseInt(surah);
+
+            const [entries, total] = await Promise.all([
+                collection.find(filter)
+                    .sort({ surah_id: 1, ayah_start: 1 })
+                    .skip(skip)
+                    .limit(limitNum)
+                    .toArray(),
+                collection.countDocuments(filter)
+            ]);
+
+            return {
+                entries: entries.map(e => ({
+                    id: e._id.toString(),
+                    surah_id: e.surah_id,
+                    ayah_start: e.ayah_start,
+                    ayah_end: e.ayah_end,
+                    text_ar: e.text_ar,
+                    text_th: e.text_th || '',
+                    translated_at: e.translated_at
+                })),
+                total,
+                page: pageNum,
+                pages: Math.ceil(total / limitNum)
+            };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.status(500).send({ error: 'Internal Server Error' });
+        }
+    });
+
+    // GET /api/admin/tafsir-assadi/stats - Get translation stats
+    fastify.get('/admin/tafsir-assadi/stats', async (request, reply) => {
+        try {
+            const collection = await getCollection('tafsir_assadi');
+
+            const [total, translated] = await Promise.all([
+                collection.countDocuments(),
+                collection.countDocuments({ text_th: { $exists: true, $ne: '' } })
+            ]);
+
+            return {
+                total,
+                translated,
+                untranslated: total - translated,
+                percentage: total > 0 ? Math.round((translated / total) * 100) : 0
+            };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.status(500).send({ error: 'Internal Server Error' });
+        }
+    });
+
+    // GET /api/admin/tafsir-assadi/:id - Get single entry
+    fastify.get('/admin/tafsir-assadi/:id', async (request, reply) => {
+        const { id } = request.params as { id: string };
+
+        try {
+            const { ObjectId } = await import('mongodb');
+            const collection = await getCollection('tafsir_assadi');
+            const entry = await collection.findOne({ _id: new ObjectId(id) });
+
+            if (!entry) {
+                return reply.status(404).send({ error: 'Entry not found' });
+            }
+
+            return {
+                id: entry._id.toString(),
+                surah_id: entry.surah_id,
+                ayah_start: entry.ayah_start,
+                ayah_end: entry.ayah_end,
+                text_ar: entry.text_ar,
+                text_th: entry.text_th || '',
+                translated_at: entry.translated_at
+            };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.status(500).send({ error: 'Internal Server Error' });
+        }
+    });
+
+    // PUT /api/admin/tafsir-assadi/:id - Update translation
+    fastify.put('/admin/tafsir-assadi/:id', async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const { text_th } = request.body as { text_th: string };
+
+        try {
+            const { ObjectId } = await import('mongodb');
+            const collection = await getCollection('tafsir_assadi');
+
+            const result = await collection.updateOne(
+                { _id: new ObjectId(id) },
+                {
+                    $set: {
+                        text_th,
+                        updated_at: new Date()
+                    }
+                }
+            );
+
+            if (result.matchedCount === 0) {
+                return reply.status(404).send({ error: 'Entry not found' });
+            }
+
+            return { message: 'Updated successfully' };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.status(500).send({ error: 'Internal Server Error' });
+        }
+    });
 };
 
 function getAdminDashboardHtml(): string {

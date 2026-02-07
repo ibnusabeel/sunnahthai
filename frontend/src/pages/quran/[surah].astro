@@ -82,6 +82,16 @@ function toThaiNumeral(num: number): string {
 function findAssadiTafsir(ayahNo: number): TafsirAssadi | undefined {
   return tafsirAssadiList.find(t => ayahNo >= t.ayah_start && ayahNo <= t.ayah_end);
 }
+
+// Helper to wrap Arabic text with font-arabic class
+function wrapArabicText(text: string): string {
+  // Regex to match Arabic Unicode range (including extended)
+  const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+(?:\s*[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+)*/g;
+  
+  return text.replace(arabicRegex, (match) => 
+    `<span class="font-arabic text-lg" dir="rtl">${match}</span>`
+  );
+}
 ---
 
 <BaseLayout title={surahInfo ? `${surahInfo.name} | อัลกุรอาน` : 'อัลกุรอาน'}>
@@ -302,7 +312,7 @@ function findAssadiTafsir(ayahNo: number): TafsirAssadi | undefined {
                         <summary class="cursor-pointer flex items-center gap-3 p-4 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-colors list-none">
                           <span class="text-xl">📘</span>
                           <span class="font-medium text-blue-800">
-                            تفسير السعدي
+                            ตัฟสีร อัสสะอฺดีย์
                             {assadi.ayah_start !== assadi.ayah_end && (
                               <span class="text-blue-600 text-sm ml-2">
                                 (آية {assadi.ayah_start}-{assadi.ayah_end})
@@ -320,9 +330,10 @@ function findAssadiTafsir(ayahNo: number): TafsirAssadi | undefined {
                           {assadi.text_th && (
                             <div class="mt-4 pt-4 border-t border-blue-200">
                               <p class="text-sm text-blue-600 font-medium mb-2">🇹🇭 คำแปลภาษาไทย</p>
-                              <p class="text-text leading-relaxed whitespace-pre-wrap">
-                                {assadi.text_th}
-                              </p>
+                              <p 
+                                class="text-text leading-relaxed whitespace-pre-wrap"
+                                set:html={wrapArabicText(assadi.text_th)}
+                              />
                             </div>
                           )}
                         </div>

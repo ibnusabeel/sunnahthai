@@ -185,6 +185,58 @@ const quranRoutes: FastifyPluginAsync = async (fastify) => {
             return reply.status(500).send({ error: 'Internal Server Error' });
         }
     });
-};
 
+    // GET /api/quran/tafsir/assadi/:surah - Get all As-Sa'di tafsir for a surah
+    fastify.get('/quran/tafsir/assadi/:surah', async (request, reply) => {
+        const { surah } = request.params as { surah: string };
+        const surahNo = parseInt(surah);
+
+        if (isNaN(surahNo) || surahNo < 1 || surahNo > 114) {
+            return reply.status(400).send({ error: 'Invalid surah number' });
+        }
+
+        try {
+            const collection = await getCollection('tafsir_assadi');
+            const tafsirs = await collection
+                .find({ surah_id: surahNo })
+                .sort({ ayah_start: 1 })
+                .toArray();
+
+            return { surah: surahNo, tafsirs, total: tafsirs.length };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.status(500).send({ error: 'Internal Server Error' });
+        }
+    });
+
+    // GET /api/quran/tafsir/assadi/:surah/:ayah - Get As-Sa'di tafsir for specific ayah
+    fastify.get('/quran/tafsir/assadi/:surah/:ayah', async (request, reply) => {
+        const { surah, ayah } = request.params as { surah: string; ayah: string };
+        const surahNo = parseInt(surah);
+        const ayahNo = parseInt(ayah);
+
+        if (isNaN(surahNo) || surahNo < 1 || surahNo > 114) {
+            return reply.status(400).send({ error: 'Invalid surah number' });
+        }
+
+        try {
+            const collection = await getCollection('tafsir_assadi');
+            // Find tafsir where ayah falls within the range
+            const tafsir = await collection.findOne({
+                surah_id: surahNo,
+                ayah_start: { $lte: ayahNo },
+                ayah_end: { $gte: ayahNo }
+            });
+
+            if (!tafsir) {
+                return reply.status(404).send({ error: 'Tafsir not found for this ayah' });
+            }
+
+            return { surah: surahNo, ayah: ayahNo, tafsir };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.status(500).send({ error: 'Internal Server Error' });
+        }
+    });
+};
 export default quranRoutes;

@@ -24,8 +24,17 @@ interface Surah {
   revelation_place: string;
 }
 
+interface TafsirAssadi {
+  surah_id: number;
+  ayah_start: number;
+  ayah_end: number;
+  text_ar: string;
+  text_th?: string;
+}
+
 let surah: Surah | null = null;
 let ayahs: Ayah[] = [];
+let tafsirAssadiList: TafsirAssadi[] = [];
 let nextSurah: number | null = null;
 let prevSurah: number | null = null;
 
@@ -39,6 +48,17 @@ try {
     const id = parseInt(surahId);
     prevSurah = id > 1 ? id - 1 : null;
     nextSurah = id < 114 ? id + 1 : null;
+    
+    // Fetch As-Sa'di tafsir
+    try {
+      const tafsirRes = await fetch(`${API_URL}/api/quran/tafsir/assadi/${surahId}`);
+      if (tafsirRes.ok) {
+        const tafsirData = await tafsirRes.json();
+        tafsirAssadiList = tafsirData.tafsirs || [];
+      }
+    } catch (e) {
+      console.error("Failed to fetch As-Sa'di tafsir:", e);
+    }
   }
 } catch (error) {
   console.error("Failed to fetch surah:", error);
@@ -56,6 +76,11 @@ const showBismillah = surah && surah.id !== 9 && surah.id !== 1;
 const thaiNumerals = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
 function toThaiNumeral(num: number): string {
   return String(num).split('').map(d => thaiNumerals[parseInt(d)]).join('');
+}
+
+// Helper to find As-Sa'di tafsir for an ayah
+function findAssadiTafsir(ayahNo: number): TafsirAssadi | undefined {
+  return tafsirAssadiList.find(t => ayahNo >= t.ayah_start && ayahNo <= t.ayah_end);
 }
 ---
 
@@ -91,6 +116,7 @@ function toThaiNumeral(num: number): string {
               <span class="text-3xl font-bold text-white">{surah.id}</span>
             </div>
 
+            <!-- Surah Name -->
             <!-- Surah Name -->
             <h1 class="text-4xl md:text-5xl font-arabic text-white mb-3 drop-shadow-lg" dir="rtl">
               سُورَةُ {surah.name_arabic}
@@ -267,6 +293,42 @@ function toThaiNumeral(num: number): string {
                       </div>
                     </details>
                   )}
+
+                  {/* As-Sa'di Tafsir Toggle */}
+                  {(() => {
+                    const assadi = findAssadiTafsir(ayah.ayah_no);
+                    return assadi && (
+                      <details class="group/assadi mt-3">
+                        <summary class="cursor-pointer flex items-center gap-3 p-4 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-colors list-none">
+                          <span class="text-xl">📘</span>
+                          <span class="font-medium text-blue-800">
+                            تفسير السعدي
+                            {assadi.ayah_start !== assadi.ayah_end && (
+                              <span class="text-blue-600 text-sm ml-2">
+                                (آية {assadi.ayah_start}-{assadi.ayah_end})
+                              </span>
+                            )}
+                          </span>
+                          <svg class="w-5 h-5 text-blue-600 ml-auto transform group-open/assadi:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                          </svg>
+                        </summary>
+                        <div class="mt-4 p-5 bg-blue-50/50 rounded-2xl border border-blue-200">
+                          <p class="font-arabic text-xl leading-[2.2] text-text text-right" dir="rtl">
+                            {assadi.text_ar}
+                          </p>
+                          {assadi.text_th && (
+                            <div class="mt-4 pt-4 border-t border-blue-200">
+                              <p class="text-sm text-blue-600 font-medium mb-2">🇹🇭 คำแปลภาษาไทย</p>
+                              <p class="text-text leading-relaxed whitespace-pre-wrap">
+                                {assadi.text_th}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </details>
+                    );
+                  })()}
                 </div>
               </article>
             ))}

@@ -15,6 +15,14 @@
 }
 
 @font-face {
+    font-family: 'SurahNames';
+    src: url('/fonts/sura_names.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
     font-family: 'UthmanTN';
     src: url('/font/UthmanTN.ttf') format('truetype');
     font-weight: normal;

@@ -35,7 +35,7 @@ interface TranslatedHadith {
     last_updated: Date;
 }
 
-async function exportTranslations(books: string[] = ['lulu', 'adab']): Promise<TranslatedHadith[]> {
+async function exportTranslations(books: string[] = ['lulu', 'adab', 'ahmad']): Promise<TranslatedHadith[]> {
     console.log('📤 Exporting translations from local database...');
 
     const client = new MongoClient(LOCAL_URI);
@@ -49,7 +49,7 @@ async function exportTranslations(books: string[] = ['lulu', 'adab']): Promise<T
         const query = {
             hadith_book: { $in: books },
             status: 'translated',
-            'content.th': { $exists: true, $ne: '', $ne: null }
+            'content.th': { $exists: true, $nin: ['', null] }
         };
 
         const hadiths = await collection.find(query, {
@@ -183,7 +183,7 @@ Examples:
             const translated = await collection.countDocuments({
                 hadith_book: book,
                 status: 'translated',
-                'content.th': { $exists: true, $ne: '', $ne: null }
+                'content.th': { $exists: true, $nin: ['', null] }
             });
             console.log(`📚 ${book}: ${translated}/${total} translated (${Math.round(translated / total * 100)}%)`);
         }

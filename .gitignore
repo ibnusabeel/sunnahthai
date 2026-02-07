@@ -32,3 +32,6 @@ logs/
 # Deployment artifacts to ignore on git
 deployment_package/
 deployment_package.zip
+
+scripts/
+test.txt

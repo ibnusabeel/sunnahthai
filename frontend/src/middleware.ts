@@ -17,5 +17,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
         }
     }
 
+    // Font Caching Strategy
+    if (url.pathname.match(/\.(ttf|woff|woff2|otf)$/)) {
+        const response = await next();
+        response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+        return response;
+    }
+
     return next();
 });

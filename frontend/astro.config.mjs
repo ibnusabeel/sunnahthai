@@ -21,6 +21,9 @@ export default defineConfig({
     adapter: node({
         mode: 'standalone',
     }),
+    build: {
+        inlineStylesheets: 'always',
+    },
     server: {
         host: '0.0.0.0',
         port: 4321,

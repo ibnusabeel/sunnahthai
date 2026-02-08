@@ -1,30 +1,54 @@
 import { FastifyPluginAsync } from 'fastify';
+import { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { getCollection } from '../config/db.js';
 
-interface HadithsQuery {
-    page?: string;
-    limit?: string;
-    search?: string;
-    book?: string;
-    status?: string;
-    kitab?: string;
-}
+const HadithsQuerySchema = z.object({
+    page: z.coerce.number().min(1).default(1),
+    limit: z.coerce.number().min(1).max(100).default(15),
+    search: z.string().optional().default(''),
+    book: z.string().optional(),
+    status: z.string().optional(),
+    kitab: z.string().optional()
+});
 
-const hadithsRoutes: FastifyPluginAsync = async (fastify) => {
+const HadithParamsSchema = z.object({
+    id: z.string(),
+    book: z.string().optional()
+});
+
+type HadithsQuery = z.infer<typeof HadithsQuerySchema>;
+
+const hadithsRoutes: FastifyPluginAsync = async (f) => {
+    const fastify = f.withTypeProvider<ZodTypeProvider>();
+
     // GET /api/hadiths - List all hadiths
-    fastify.get('/hadiths', async (request, reply) => {
+    fastify.get('/hadiths', {
+        schema: {
+            querystring: HadithsQuerySchema
+        }
+    }, async (request, reply) => {
         return handleHadithsList(request, reply, null);
     });
 
     // GET /api/hadiths/:book - List hadiths for specific book
-    fastify.get('/hadiths/:book', async (request, reply) => {
-        const { book } = request.params as { book: string };
+    fastify.get('/hadiths/:book', {
+        schema: {
+            params: z.object({ book: z.string() }),
+            querystring: HadithsQuerySchema
+        }
+    }, async (request, reply) => {
+        const { book } = request.params;
         return handleHadithsList(request, reply, book);
     });
 
     // GET /api/hadith/:id - Get single hadith
-    fastify.get('/hadith/:id', async (request, reply) => {
-        const { id } = request.params as { id: string };
+    fastify.get('/hadith/:id', {
+        schema: {
+            params: z.object({ id: z.string() })
+        }
+    }, async (request, reply) => {
+        const { id } = request.params;
 
         try {
             const collection = await getCollection('translations');
@@ -43,14 +67,23 @@ const hadithsRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     async function handleHadithsList(request: any, reply: any, book: string | null) {
+        // Request query is already validated and transformed by Zod
         const query = request.query as HadithsQuery;
-        const page = parseInt(query.page || '1');
-        const limit = Math.min(Math.max(parseInt(query.limit || '15'), 1), 100);
-        const search = query.search || '';
-        const status = query.status || '';
-        const kitab = query.kitab || '';
 
-        // Calculate skip early, before any try/catch blocks
+        // Cache Key Generation
+        const { CacheService } = await import('../services/cache.js');
+        const cacheKey = CacheService.generateKey('hadiths', { ...query, book });
+
+        // Check Cache
+        const cachedData = CacheService.get(cacheKey);
+        if (cachedData) {
+            reply.header('X-Cache', 'HIT');
+            return cachedData;
+        }
+
+        const { page, limit, search, status, kitab } = query;
+
+        // Calculate skip
         const skip = (page - 1) * limit;
 
         try {
@@ -153,7 +186,7 @@ const hadithsRoutes: FastifyPluginAsync = async (fastify) => {
                 return rest;
             });
 
-            return {
+            const responseData = {
                 book,
                 data: formattedData,
                 page,
@@ -161,6 +194,12 @@ const hadithsRoutes: FastifyPluginAsync = async (fastify) => {
                 total,
                 total_pages: Math.ceil(total / limit)
             };
+
+            // Cache the result for 1 minute
+            CacheService.set(cacheKey, responseData, 60 * 1000);
+            reply.header('X-Cache', 'MISS');
+
+            return responseData;
         } catch (error) {
             fastify.log.error(error);
             return reply.status(500).send({ error: 'Internal Server Error' });

@@ -6,6 +6,20 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { connectDB } from './config/db.js';
+import * as Sentry from '@sentry/node';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
+
+// Initialize Sentry
+Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    integrations: [
+        nodeProfilingIntegration(),
+    ],
+    // Tracing
+    tracesSampleRate: 1.0, //  Capture 100% of the transactions
+    // Set sampling rate for profiling - this is relative to tracesSampleRate
+    profilesSampleRate: 1.0,
+});
 
 // Routes
 import booksRoutes from './routes/books.js';
@@ -27,6 +41,11 @@ dotenv.config({ path: '../.env' });
 const fastify = Fastify({
     logger: true
 });
+
+// Setup Zod Validation
+import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
+fastify.setValidatorCompiler(validatorCompiler);
+fastify.setSerializerCompiler(serializerCompiler);
 
 // Register Plugins
 await fastify.register(cors, {
@@ -56,6 +75,19 @@ fastify.register(adminRoutes, { prefix: '/api' }); // Admin CRUD routes
 // Health check
 fastify.get('/health', async () => {
     return { status: 'ok', timestamp: new Date().toISOString() };
+});
+
+// Global Error Handler for Sentry
+fastify.setErrorHandler((error, request, reply) => {
+    Sentry.captureException(error);
+    fastify.log.error(error);
+
+    // Default Fastify error handling
+    reply.status(error.statusCode || 500).send({
+        error: "Internal Server Error",
+        message: error.message,
+        statusCode: error.statusCode || 500
+    });
 });
 
 // Start server

@@ -82,11 +82,13 @@ fastify.setErrorHandler((error, request, reply) => {
     Sentry.captureException(error);
     fastify.log.error(error);
 
+    const err = error as any;
+
     // Default Fastify error handling
-    reply.status(error.statusCode || 500).send({
+    reply.status(err.statusCode || 500).send({
         error: "Internal Server Error",
-        message: error.message,
-        statusCode: error.statusCode || 500
+        message: err.message || "Unknown Error",
+        statusCode: err.statusCode || 500
     });
 });
 

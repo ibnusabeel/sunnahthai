@@ -159,17 +159,3 @@ deployment_package/
 (วิธีนี้จะเร็วกว่าการ Zip Upload ขึ้นไปใหม่ทุกครั้งมากครับ)
 
 
-ssh -L 27018:localhost:27017 root@217.216.111.210
-
-
-update db
-สรุปขั้นตอน:
-Terminal 1 - สร้าง SSH Tunnel (เปิดไว้ตลอด):
-
-powershell
-ssh -L 27018:localhost:27017 root@217.216.111.210
-Terminal 2 - Sync data:
-
-bash
-cd backend
-npx tsx scripts/sync_to_production.ts sync

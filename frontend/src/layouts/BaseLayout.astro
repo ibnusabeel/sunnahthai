@@ -1,5 +1,6 @@
 ---
 import SEO from "../components/SEO.astro";
+import "../styles/global.css";
 
 export interface Props {
   title?: string;
@@ -43,15 +44,7 @@ const {
     <link
       href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Thai+Looped:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
-      media="print"
-      onload="this.media='all'"
     />
-    <noscript>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Thai+Looped:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet"
-      />
-    </noscript>
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
@@ -204,7 +197,3 @@ const {
     </script>
   </body>
 </html>
-
-<style is:global>
-  @import "../styles/global.css";
-</style>
